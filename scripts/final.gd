@@ -71,5 +71,5 @@ func _listado() -> String:
 		texto += "[b]%s[/b] — %s\n%s\n\n" % [o["titulo"], Juego.credito(o), o["texto"]]
 	var extras: int = Juego.bolso.size() - Juego.robadas.size()
 	if extras > 0:
-		texto += "[i]Además, en el bolso de Polo quedaron %d piezas de historia que nadie reclamó.[/i]\n" % extras
+		texto += "[i]Piezas de historia que quedaron en el bolso de Polo sin que nadie las reclamara: %d.[/i]\n" % extras
 	return texto
