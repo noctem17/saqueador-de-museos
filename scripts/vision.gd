@@ -24,4 +24,4 @@ static func alcance_real(alcance: float, jugador: Jugador) -> float:
 
 
 static func ritmo(distancia: float, alcance: float) -> float:
-	return lerpf(2.2, 0.55, clampf(distancia / alcance, 0.0, 1.0))
+	return lerpf(0.8, 0.22, clampf(distancia / alcance, 0.0, 1.0))

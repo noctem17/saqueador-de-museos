@@ -18,6 +18,11 @@ var _sospecha_txt: Label
 var _aviso: Label
 var _alarma: Label
 var _estado: Label
+var _vida: ProgressBar
+var _vida_txt: Label
+var _marca: Label
+var _rojo: ColorRect
+var _tween_marca: Tween
 var _llamada: PanelContainer
 var _llamada_quien: Label
 var _llamada_texto: Label
@@ -54,8 +59,10 @@ func _armar() -> void:
 
 	_estado = _etiqueta(raiz, 16)
 	_estado.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	_estado.position = Vector2(24, -46)
-	_estado.size = Vector2(420, 28)
+	_estado.offset_left = 24
+	_estado.offset_right = 444
+	_estado.offset_top = -46
+	_estado.offset_bottom = -18
 
 	# Agenda pequeña siempre a la vista: aquí se ve tachar cada obra.
 	var papel := PanelContainer.new()
@@ -122,6 +129,39 @@ func _armar() -> void:
 	_aviso = _etiqueta(raiz, 20)
 	_aviso.modulate.a = 0.0
 	_centrar(_aviso, 0, 150, 800)
+
+	_vida_txt = _etiqueta(raiz, 16)
+	_vida_txt.text = "VIDA"
+	_vida_txt.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	_vida_txt.offset_left = 24
+	_vida_txt.offset_right = 144
+	_vida_txt.offset_top = -96
+	_vida_txt.offset_bottom = -72
+	_vida_txt.visible = false
+	_vida = ProgressBar.new()
+	_vida.show_percentage = false
+	_vida.max_value = 100.0
+	_vida.value = 100.0
+	_vida.visible = false
+	_vida.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	_vida.offset_left = 24
+	_vida.offset_right = 324
+	_vida.offset_top = -70
+	_vida.offset_bottom = -52
+	_vida.add_theme_stylebox_override("fill", _caja(Color("3fae49"), 0))
+	_vida.add_theme_stylebox_override("background", _caja(Color(0, 0, 0, 0.6), 0))
+	raiz.add_child(_vida)
+
+	_marca = _etiqueta(raiz, 34)
+	_marca.text = "X"
+	_marca.modulate.a = 0.0
+	_centrar(_marca, 0, -26, 60)
+
+	_rojo = ColorRect.new()
+	_rojo.color = Color(0.6, 0.0, 0.0, 0.0)
+	_rojo.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_rojo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	raiz.add_child(_rojo)
 
 	_armar_llamada(raiz)
 	_armar_pantalla(raiz)
@@ -290,6 +330,7 @@ func _aplicar_pausa(pausar: bool) -> void:
 func _process(_delta: float) -> void:
 	if jugador == null or not is_instance_valid(jugador):
 		return
+	_punto.visible = not Juego.control_bloqueado
 	_prompt.text = jugador.texto_uso
 	_barra_uso.visible = jugador.progreso_uso > 0.0
 	_barra_uso.value = jugador.progreso_uso
@@ -302,7 +343,9 @@ func _process(_delta: float) -> void:
 
 	if jugador.personaje == Jugador.Personaje.MOSTRO:
 		var municion: String = "Recargando..." if jugador.recargando() else "%d/%d" % [jugador.balas, Jugador.BALAS]
-		_estado.text = "MOSTRO  |  Vida %d  |  %s" % [jugador.vida, municion]
+		_estado.text = "MOSTRO  |  Balas %s" % municion
+		_vida.visible = true
+		_vida_txt.visible = true
 	elif jugador.agachado:
 		_estado.text = "POLO  |  agachado"
 	elif jugador.corriendo:
@@ -310,6 +353,36 @@ func _process(_delta: float) -> void:
 	else:
 		_estado.text = "POLO"
 	_alarma.visible = Juego.alarma and fmod(Time.get_ticks_msec() / 500.0, 2.0) < 1.4
+
+
+## Conecta las señales del jugador. La misión lo llama una vez lo asigna.
+func conectar_jugador(j: Jugador) -> void:
+	jugador = j
+	j.impacto_enemigo.connect(_marcar_impacto)
+	j.herido.connect(_al_recibir_dano)
+	j.vida_cambio.connect(_actualizar_vida)
+
+
+func _actualizar_vida() -> void:
+	var valor: float = jugador.vida
+	var tween := create_tween()
+	tween.tween_property(_vida, "value", valor, 0.15)
+	var color: Color = Color("c62f24") if valor < 35.0 else (Color("d9a22e") if valor < 65.0 else Color("3fae49"))
+	_vida.add_theme_stylebox_override("fill", _caja(color, 0))
+
+
+func _al_recibir_dano() -> void:
+	_rojo.color.a = 0.38
+	var tween := create_tween()
+	tween.tween_property(_rojo, "color:a", 0.0, 0.4)
+
+
+func _marcar_impacto(mortal: bool) -> void:
+	if _tween_marca:
+		_tween_marca.kill()
+	_marca.modulate = Color(1, 0.15, 0.1) if mortal else Color.WHITE
+	_tween_marca = create_tween()
+	_tween_marca.tween_property(_marca, "modulate:a", 0.0, 0.3)
 
 
 func fijar_objetivo(texto: String) -> void:
@@ -337,6 +410,7 @@ func fundir(destino: float, tiempo: float) -> void:
 func reproducir_llamada(lineas: Array[Dictionary], automatica: bool = false) -> void:
 	_llamada.visible = true
 	_llamada_ayuda.visible = not automatica
+	Sfx.plano(self, "telefono", -14.0)
 	for linea: Dictionary in lineas:
 		_llamada_quien.text = linea["quien"]
 		_llamada_texto.text = linea["texto"]

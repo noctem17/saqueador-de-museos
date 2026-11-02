@@ -1,18 +1,20 @@
 class_name CamaraSeguridad
 extends Node3D
-## Barre de lado a lado. El cono visible le muestra al jugador qué zona vigila.
+## Barre de lado a lado. Su luz roja le muestra al jugador qué zona vigila y, al
+## ser una luz, las paredes la cortan igual que cortan la vista de la cámara.
 
 const ALCANCE: float = 13.0
 const MEDIO_ANGULO: float = 0.5
 const BARRIDO: float = 0.8
+const LUZ_NORMAL: float = 2.2
+const LUZ_ALERTA: float = 7.0
 
 var giro_base: float = 0.0
 var activa: bool = true
 var sospecha: float = 0.0
 var _tiempo: float = 0.0
 var _cabeza: Node3D
-var _cono: MeshInstance3D
-var _mat_cono: StandardMaterial3D
+var _haz: SpotLight3D
 var _led: StandardMaterial3D
 var _jugador: Jugador
 
@@ -47,25 +49,14 @@ func _ready() -> void:
 	luz.position = Vector3(0.07, 0.07, -0.22)
 	_cabeza.add_child(luz)
 
-	_cono = MeshInstance3D.new()
-	var cono := CylinderMesh.new()
-	cono.top_radius = 0.0
-	cono.bottom_radius = tan(MEDIO_ANGULO) * ALCANCE
-	cono.height = ALCANCE
-	cono.radial_segments = 20
-	cono.cap_bottom = false
-	_cono.mesh = cono
-	_cono.rotation.x = -PI / 2.0
-	_cono.position.z = -ALCANCE * 0.5
-	_mat_cono = StandardMaterial3D.new()
-	_mat_cono.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	_mat_cono.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_mat_cono.cull_mode = BaseMaterial3D.CULL_DISABLED
-	_mat_cono.albedo_color = Color(1, 0.25, 0.15, 0.05)
-	_mat_cono.no_depth_test = false
-	_cono.material_override = _mat_cono
-	_cono.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_cabeza.add_child(_cono)
+	_haz = SpotLight3D.new()
+	_haz.light_color = Color(1.0, 0.16, 0.08)
+	_haz.light_energy = LUZ_NORMAL
+	_haz.spot_range = ALCANCE
+	_haz.spot_angle = rad_to_deg(MEDIO_ANGULO)
+	_haz.spot_attenuation = 0.5
+	_haz.shadow_enabled = true
+	_cabeza.add_child(_haz)
 
 	_jugador = get_tree().get_first_node_in_group("jugador") as Jugador
 
@@ -73,7 +64,7 @@ func _ready() -> void:
 func desactivar() -> void:
 	activa = false
 	sospecha = 0.0
-	_cono.visible = false
+	_haz.visible = false
 	_led.emission_energy_multiplier = 0.0
 	_led.albedo_color = Color(0.1, 0.1, 0.1)
 	_cabeza.rotation.x = -0.9   # Queda mirando al piso, se nota que está apagada.
@@ -91,11 +82,12 @@ func _physics_process(delta: float) -> void:
 	var alcance: float = Vision.alcance_real(ALCANCE, _jugador)
 	var espacio: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
 	if Vision.ve_jugador(espacio, ojo, adelante, _jugador, alcance, MEDIO_ANGULO):
-		sospecha += Vision.ritmo(ojo.distance_to(_jugador.punto_pecho()), alcance) * delta * 0.8
+		sospecha += Vision.ritmo(ojo.distance_to(_jugador.punto_pecho()), alcance) * delta * 0.7
 		Juego.sospecha = maxf(Juego.sospecha, sospecha)
-		_mat_cono.albedo_color = Color(1, 0.1, 0.05, 0.16)
+		_haz.light_energy = LUZ_ALERTA
 		if sospecha >= 1.0:
+			Sfx.en(self, "alerta", global_position, 0.0, 30.0)
 			Juego.disparar_alarma("camara")
 	else:
 		sospecha = maxf(sospecha - delta * 0.4, 0.0)
-		_mat_cono.albedo_color = Color(1, 0.25, 0.15, 0.05)
+		_haz.light_energy = LUZ_NORMAL

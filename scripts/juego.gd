@@ -12,6 +12,7 @@ const CAPA_MUNDO: int = 1
 const CAPA_JUGADOR: int = 2
 const CAPA_ENEMIGO: int = 4
 const CAPA_INTERACTUABLE: int = 8
+const CAPA_IMPACTO: int = 16
 
 const OBRAS_POR_MISION: int = 4
 const COLECCIONABLES_POR_MISION: int = 6

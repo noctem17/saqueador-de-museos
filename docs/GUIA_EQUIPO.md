@@ -35,9 +35,9 @@ Graben con el celular en un cuarto silencioso. Una línea por archivo, en MP3 o 
 
 ## 4. Sonidos
 
-Pueden grabarlos o bajarlos de [Kenney](https://kenney.nl/assets/category:Audio) o [Freesound](https://freesound.org) (busquen licencia CC0):
+Los sonidos actuales son provisionales. Para cambiar uno, guarden el nuevo como WAV en `audio/` con el mismo nombre. Pueden grabarlos o bajarlos de [Kenney](https://kenney.nl/assets/category:Audio) o [Freesound](https://freesound.org) (busquen licencia CC0):
 
-pasos sobre madera, pasos sobre baldosa, puerta, alarma, disparo, recarga, descolgar un cuadro, moneda, teléfono, motor de camioneta y música de suspenso.
+`disparo`, `disparo_guardia`, `recarga`, `desenfundar`, `paso`, `impacto`, `carne`, `moneda`, `papel`, `descolgar`, `consola`, `alerta`, `telefono`, `alarma`, `ambiente` y `motor`.
 
 ## 5. Revisar la historia
 
@@ -45,4 +45,4 @@ Lean `scripts/catalogo.gd` y `docs/FUENTES.md`. Si un dato está mal o el profes
 
 ## Modelos 3D
 
-No hace falta modelar: usaremos modelos gratuitos ya hechos. Si alguien quiere intentarlo, el programa es [Blender](https://www.blender.org/), que es gratis, y el formato de entrega es `.glb`. Lo más útil sería un objeto del museo, como las barandas, las bancas o las vitrinas. Los personajes son lo más difícil, así que no conviene empezar por ahí.
+Los personajes y carros ya usan modelos gratuitos con animaciones (ver [CREDITOS.md](CREDITOS.md)), así que no hace falta modelarlos. Si alguien quiere intentarlo, el programa es [Blender](https://www.blender.org/), que es gratis, y el formato de entrega es `.glb`. Lo más útil sería un objeto propio del museo, como barandas, vitrinas o la escalera.

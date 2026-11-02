@@ -36,6 +36,7 @@ func prompt(_j: Jugador) -> String:
 func completar(_j: Jugador) -> void:
 	robada = true
 	_contenido.visible = false
+	Sfx.plano(get_parent(), "descolgar", -5.0)
 	_placa.text = "ESTA OBRA YA NO\nPUEDE SER VISTA"
 	_placa.modulate = Color(0.75, 0.1, 0.08)
 	for hijo: Node in get_children():

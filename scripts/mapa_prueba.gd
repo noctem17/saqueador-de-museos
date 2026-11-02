@@ -63,10 +63,14 @@ const SLOTS_PARED: Array = [
 const SLOTS_PEDESTAL: Array = [
 	[-8.0, -18.0], [-8.0, -11.0], [3.0, -15.0], [-18.0, 7.0], [12.0, 7.5], [20.0, 0.0], [12.0, -20.0],
 ]
+## Coleccionables: siempre sobre algún mueble o en un rincón. [x, y, z]
 const SLOTS_COLECCIONABLE: Array = [
-	[-22.5, 10.5], [-10.0, -3.5], [-3.5, 10.5], [3.5, -4.5], [22.5, 10.5], [10.0, -3.5],
-	[-22.5, -22.5], [6.5, -22.5], [-8.0, -7.5], [14.5, -22.5], [9.5, -7.5], [22.5, -7.5],
+	[-1.8, 1.1, 5.4], [1.9, 1.1, 5.6], [20.9, 0.8, -22.5], [-12.0, 0.47, 6.5], [18.0, 0.47, 7.0],
+	[-8.0, 0.47, -14.5], [15.3, 0.75, -12.0], [15.3, 1.45, -18.0], [10.2, 0.9, -8.5],
+	[-23.3, 0.01, -6.9], [-1.5, 0.01, -11.9], [23.3, 0.01, 11.3],
 ]
+## [x, z, giro en grados]
+const BANCAS: Array = [[-12.0, 6.5, 0.0], [18.0, 7.0, 0.0], [-8.0, -14.5, 90.0]]
 const CAMARAS: Array = [
 	# [x, y, z, giro base]
 	[-23.3, 3.6, 11.3, -45.0], [7.3, 3.6, -5.3, 135.0], [23.3, 3.6, 11.3, 45.0],
@@ -83,6 +87,7 @@ const SPAWN_MOSTRO := Vector3(0, 0.1, 15.0)
 const SPAWN_POLICIA: Array[Vector3] = [Vector3(-22, 0.1, -9), Vector3(4, 0.1, 10)]
 const POS_TERMINAL := Vector3(21.5, 1.05, -22.6)
 const POS_CAMIONETA := Vector3(9.0, 0.0, 19.5)
+const FIN_HUIDA := Vector3(-78.0, 0.0, 19.5)
 
 var mat_pared: StandardMaterial3D
 var mat_zocalo: StandardMaterial3D
@@ -111,8 +116,7 @@ func construir() -> void:
 	_caja_solida(Vector3(2.0, 0.8, 0.8), Vector3(21.5, 0.4, -22.5), Color("23262b"))
 	for slot: Array in SLOTS_PEDESTAL:
 		_caja_solida(Vector3(0.9, 1.0, 0.9), Vector3(slot[0], 0.5, slot[1]), Color("efeae0"))
-	for slot: Array in SLOTS_COLECCIONABLE:
-		_caja_solida(Vector3(0.6, 0.95, 0.6), Vector3(slot[0], 0.475, slot[1]), Color("3a3a3e"))
+	_muebles()
 
 	_parqueadero()
 	_luces()
@@ -221,7 +225,22 @@ func _material(color: Color) -> StandardMaterial3D:
 func _parqueadero() -> void:
 	# Muros perimetrales para que nadie se salga del mapa.
 	_caja_solida(Vector3(52, 3, 0.4), Vector3(0, 1.5, 33), Color("36383c"))
-	_caja_solida(Vector3(0.4, 3, 21), Vector3(-26, 1.5, 22.5), Color("36383c"))
+	# Muro oeste con la salida a la calle (z entre 17 y 22).
+	_caja_solida(Vector3(0.4, 3, 5), Vector3(-26, 1.5, 14.5), Color("36383c"))
+	_caja_solida(Vector3(0.4, 3, 11), Vector3(-26, 1.5, 27.5), Color("36383c"))
+	_caja_mat(Vector3(0.4, 3, 5), Vector3(-26, 1.5, 19.5), null, true)
+	_suelo(-90.0, 12.0, -26.0, 27.0, Color("1f2024"))
+	var pluma := Node3D.new()
+	pluma.name = "Pluma"
+	pluma.position = Vector3(-25.8, 1.1, 17.2)
+	add_child(pluma)
+	var tubo := MeshInstance3D.new()
+	var caja_tubo := BoxMesh.new()
+	caja_tubo.size = Vector3(0.1, 0.1, 4.8)
+	tubo.mesh = caja_tubo
+	tubo.position.z = 2.4
+	tubo.material_override = _material(Color("c8352b"))
+	pluma.add_child(tubo)
 	_caja_solida(Vector3(0.4, 3, 21), Vector3(26, 1.5, 22.5), Color("36383c"))
 	for i: int in 5:
 		var linea := MeshInstance3D.new()
@@ -236,8 +255,47 @@ func _parqueadero() -> void:
 
 
 func _carro(pos: Vector3, color: Color) -> void:
-	_caja_solida(Vector3(2.0, 1.0, 4.4), pos + Vector3(0, 0.6, 0), color)
-	_caja_mat(Vector3(1.8, 0.6, 2.2), pos + Vector3(0, 1.4, 0), _material(color.darkened(0.45)), false)
+	var escena: PackedScene = load("res://modelos/camioneta.glb")
+	var modelo := escena.instantiate() as Node3D
+	modelo.position = pos
+	add_child(modelo)
+	pintar_carro(modelo, color)
+	_caja_mat(Vector3(2.1, 1.5, 4.2), pos + Vector3(0, 0.75, 0), null, true)
+
+
+## Cambia el color de la carrocería de un carro del paquete.
+static func pintar_carro(modelo: Node3D, color: Color) -> void:
+	for nodo: Node in modelo.find_children("*", "MeshInstance3D", true, false):
+		var malla := nodo as MeshInstance3D
+		for s: int in malla.mesh.get_surface_count():
+			var original: Material = malla.get_active_material(s)
+			if original.resource_name == "White":
+				var nuevo := original.duplicate() as BaseMaterial3D
+				nuevo.albedo_color = color
+				nuevo.metallic = 0.6
+				nuevo.roughness = 0.3
+				malla.set_surface_override_material(s, nuevo)
+
+
+func _muebles() -> void:
+	var escena: PackedScene = load("res://modelos/banca.glb")
+	for b: Array in BANCAS:
+		var banca := escena.instantiate() as Node3D
+		banca.scale = Vector3(2.4, 1.42, 2.2)
+		banca.position = Vector3(b[0], 0, b[1])
+		banca.rotation_degrees.y = b[2]
+		add_child(banca)
+		var largo := Vector3(1.6, 0.45, 0.55) if is_zero_approx(b[2]) else Vector3(0.55, 0.45, 1.6)
+		_caja_mat(largo, Vector3(b[0], 0.225, b[1]), null, true)
+	# Depósito: estantes contra el muro y un par de cajas.
+	var madera := Color("5a4632")
+	for z: float in [-12.0, -18.0]:
+		_caja_solida(Vector3(0.6, 2.2, 0.08), Vector3(15.35, 1.1, z - 2.0), madera)
+		_caja_solida(Vector3(0.6, 2.2, 0.08), Vector3(15.35, 1.1, z + 2.0), madera)
+		for y: float in [0.7, 1.4, 2.1]:
+			_caja_solida(Vector3(0.6, 0.05, 4.0), Vector3(15.35, y, z), madera)
+	_caja_solida(Vector3(1.2, 0.9, 1.0), Vector3(10.2, 0.45, -8.5), Color("7a5f42"))
+	_caja_solida(Vector3(0.9, 0.7, 0.9), Vector3(10.1, 0.35, -21.0), Color("6a5238"))
 
 
 func _luces() -> void:

@@ -12,11 +12,14 @@ var jugador: Jugador
 var hud: Hud
 var camioneta: Otros.Vehiculo
 var polo_escondido: Otros.PoloEscondido
+var polo_seguidor: Otros.PoloSeguidor
 var obras: Array[Obra] = []
 
 var _reloj_policia: Timer
 var _terminado: bool = false
 var _camioneta_visual: Node3D
+var _ambiente: AudioStreamPlayer
+var _alarma_sonido: AudioStreamPlayer
 ## Se pone en true en las pruebas automáticas para saltarse la llamada inicial.
 static var saltar_intro: bool = false
 
@@ -42,7 +45,7 @@ func _ready() -> void:
 
 	hud = Hud.new()
 	add_child(hud)
-	hud.jugador = jugador
+	hud.conectar_jugador(jugador)
 
 	_reloj_policia = Timer.new()
 	_reloj_policia.wait_time = INTERVALO_POLICIA
@@ -133,44 +136,21 @@ func _crear_camioneta() -> void:
 	camioneta = Otros.Vehiculo.new()
 	add_child(camioneta)
 	camioneta.position = MapaPrueba.POS_CAMIONETA
-	camioneta.agregar_colision(Vector3(2.5, 2.3, 5.4), Vector3(0, 1.15, 0))
-	_camioneta_visual = Node3D.new()
+	camioneta.rotation_degrees.y = -90.0   # El frente del modelo apunta a la salida.
+	camioneta.agregar_colision(Vector3(2.5, 1.9, 4.6), Vector3(0, 0.95, 0))
+	var escena: PackedScene = load("res://modelos/camioneta.glb")
+	_camioneta_visual = escena.instantiate() as Node3D
 	camioneta.add_child(_camioneta_visual)
-	var pintura := StandardMaterial3D.new()
-	pintura.albedo_color = Color("23262d")
-	pintura.roughness = 0.35
-	pintura.metallic = 0.4
-	var vidrio := StandardMaterial3D.new()
-	vidrio.albedo_color = Color("0c1016")
-	vidrio.roughness = 0.1
-	var llanta := StandardMaterial3D.new()
-	llanta.albedo_color = Color("0d0d0f")
-	var partes: Array = [
-		[Vector3(2.2, 1.2, 5.0), Vector3(0, 0.95, 0), pintura],
-		[Vector3(2.05, 0.75, 3.3), Vector3(0, 1.9, 0.5), pintura],
-		[Vector3(2.08, 0.5, 0.05), Vector3(0, 1.92, -1.17), vidrio],
-		[Vector3(0.3, 0.7, 0.7), Vector3(-1.1, 0.4, 1.6), llanta],
-		[Vector3(0.3, 0.7, 0.7), Vector3(1.1, 0.4, 1.6), llanta],
-		[Vector3(0.3, 0.7, 0.7), Vector3(-1.1, 0.4, -1.6), llanta],
-		[Vector3(0.3, 0.7, 0.7), Vector3(1.1, 0.4, -1.6), llanta],
-	]
-	for p: Array in partes:
-		var m := MeshInstance3D.new()
-		var caja := BoxMesh.new()
-		caja.size = p[0]
-		m.mesh = caja
-		m.position = p[1]
-		m.material_override = p[2]
-		_camioneta_visual.add_child(m)
-	# Un cuerpo aparte para que los guardias y el jugador no atraviesen la camioneta.
+	MapaPrueba.pintar_carro(_camioneta_visual, Color("14161b"))
+	# Cuerpo aparte para que nadie atraviese la camioneta.
 	var solido := StaticBody3D.new()
 	solido.collision_layer = Juego.CAPA_MUNDO
 	solido.collision_mask = 0
 	var col := CollisionShape3D.new()
 	var forma := BoxShape3D.new()
-	forma.size = Vector3(2.2, 2.3, 5.0)
+	forma.size = Vector3(2.1, 1.6, 4.2)
 	col.shape = forma
-	col.position.y = 1.15
+	col.position.y = 0.8
 	solido.add_child(col)
 	camioneta.add_child(solido)
 
@@ -192,7 +172,24 @@ func _crear_guardias() -> void:
 		g.global_position = g.ruta[0]
 
 
+## Cámara de cine temporal para mostrar a los personajes.
+func _plano(desde: Vector3, hacia: Vector3) -> Camera3D:
+	var cam := Camera3D.new()
+	cam.fov = 50.0
+	add_child(cam)
+	cam.global_position = desde
+	cam.look_at(hacia)
+	cam.make_current()
+	var relleno := OmniLight3D.new()
+	relleno.light_color = Color("ffdcb4")
+	relleno.light_energy = 3.6
+	relleno.omni_range = 9.0
+	cam.add_child(relleno)
+	return cam
+
+
 func _introduccion() -> void:
+	_ambiente = Sfx.bucle(self, "ambiente", -18.0)
 	if saltar_intro:
 		Juego.anotadas = Juego.lista.size()
 		hud._refrescar_agenda()
@@ -202,6 +199,8 @@ func _introduccion() -> void:
 		return
 	hud.fijar_objetivo("Llamada entrante: Mostro")
 	hud._refrescar_agenda()
+	jugador.mostrar_modelo(true)
+	var cine: Camera3D = _plano(MapaPrueba.SPAWN_POLO + Vector3(1.8, 1.4, -4.6), MapaPrueba.SPAWN_POLO + Vector3(0, 0.55, 0))
 	await hud.fundir(0.0, 1.0)
 	var lineas: Array[Dictionary] = [
 		{"quien": "MOSTRO", "texto": "Polo. Saque la agenda y anote."},
@@ -214,6 +213,9 @@ func _introduccion() -> void:
 		lineas.append({"quien": "MOSTRO", "texto": "«%s», de %s. %s" % [o["titulo"], o["autor"], o["razon"]], "anota": true})
 	lineas.append({"quien": "MOSTRO", "texto": "Las cambian de sitio seguido, así que búsquelas sala por sala. Y no me haga ir: si yo entro, no entro a mirar cuadros."})
 	await hud.reproducir_llamada(lineas)
+	jugador.mostrar_modelo(false)
+	cine.queue_free()
+	jugador.activar_camara()
 	Juego.control_bloqueado = false
 	_revisar_objetivo()
 	hud.mostrar_aviso("TAB: agenda y bolso. ESC: controles.")
@@ -239,6 +241,7 @@ func _on_alarma(motivo: String) -> void:
 func _alarma_en_curso(motivo: String) -> void:
 	Juego.control_bloqueado = true
 	_encender_luces_alarma()
+	_alarma_sonido = Sfx.bucle(self, "alarma", -16.0)
 	var pos_polo: Vector3 = jugador.global_position
 	var causa: String = "Una cámara lo pilló." if motivo == "camara" else "Lo vio un guardia."
 	await hud.reproducir_llamada([
@@ -251,8 +254,24 @@ func _alarma_en_curso(motivo: String) -> void:
 	add_child(polo_escondido)
 	polo_escondido.global_position = Vector3(pos_polo.x, 0.0, pos_polo.z)
 	_crear_marcador(polo_escondido)
-	jugador.cambiar_a_mostro(MapaPrueba.SPAWN_MOSTRO, Vector3(0, 0, 0))
+
+	# Mostro llega caminando desde la camioneta con la pistola en la mano.
+	var meta: Vector3 = MapaPrueba.SPAWN_MOSTRO
+	jugador.cambiar_a_mostro(meta + Vector3(4.5, 0.0, 2.5), meta)
+	jugador.mostrar_modelo(true, "Walk")
+	var cine: Camera3D = _plano(meta + Vector3(-2.2, 1.0, -2.0), meta + Vector3(2.0, 1.3, 1.2))
 	await hud.fundir(0.0, 0.4)
+	var entrada := create_tween()
+	entrada.tween_property(jugador, "global_position", meta, 2.2)
+	await hud.reproducir_llamada([
+		{"quien": "MOSTRO", "texto": "Se acabó la visita guiada.", "dura": 2.2},
+	], true)
+	await hud.fundir(1.0, 0.25)
+	jugador.mostrar_modelo(false)
+	jugador.mirar_hacia(Vector3(0, 0, 0))
+	cine.queue_free()
+	jugador.activar_camara()
+	await hud.fundir(0.0, 0.25)
 	Juego.control_bloqueado = false
 	_reloj_policia.start()
 	_revisar_objetivo()
@@ -261,18 +280,22 @@ func _alarma_en_curso(motivo: String) -> void:
 func _crear_marcador(destino: Node3D) -> void:
 	var marca := Label3D.new()
 	marca.text = "POLO"
-	marca.font_size = 72
-	marca.pixel_size = 0.006
+	marca.font_size = 34
+	marca.pixel_size = 0.0014
 	marca.modulate = Color(1.0, 0.85, 0.2)
 	marca.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	marca.no_depth_test = true
-	marca.fixed_size = false
+	marca.fixed_size = true
 	marca.position.y = 1.7
 	destino.add_child(marca)
 
 
 func _on_polo_rescatado() -> void:
-	hud.mostrar_aviso("Polo está con usted. Terminen la lista si se atreven.")
+	polo_seguidor = Otros.PoloSeguidor.new()
+	polo_seguidor.objetivo = jugador
+	add_child(polo_seguidor)
+	polo_seguidor.global_position = polo_escondido.global_position
+	hud.mostrar_aviso("Polo va con usted. Terminen la lista si se atreven.")
 	_revisar_objetivo()
 
 
@@ -306,13 +329,16 @@ func _huir() -> void:
 		return
 	_terminado = true
 	Juego.control_bloqueado = true
-	var camara := Camera3D.new()
-	add_child(camara)
-	camara.global_position = Vector3(0, 3.0, 27.0)
-	camara.look_at(camioneta.global_position + Vector3.UP)
-	camara.make_current()
+	if polo_seguidor:
+		polo_seguidor.visible = false
+	_plano(Vector3(-20.0, 1.6, 26.0), camioneta.global_position + Vector3(0, 0.8, 0))
+	if _alarma_sonido:
+		_alarma_sonido.volume_db = -22.0
+	Sfx.plano(self, "motor", -4.0)
+	var pluma: Node3D = mapa.get_node("Pluma")
 	var tween := create_tween()
-	tween.tween_property(camioneta, "position:x", -30.0, 2.6).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.tween_property(pluma, "rotation:x", -1.45, 0.8)
+	tween.parallel().tween_property(camioneta, "position", MapaPrueba.FIN_HUIDA, 3.0).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	await tween.finished
 	_terminar("completo" if Juego.faltantes() == 0 else "parcial")
 

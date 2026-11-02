@@ -5,6 +5,8 @@ extends CharacterBody3D
 
 signal disparo_realizado
 signal vida_cambio
+signal impacto_enemigo(mortal: bool)
+signal herido
 
 enum Personaje { POLO, MOSTRO }
 
@@ -38,6 +40,8 @@ var _pivote: Node3D
 var _camara: Camera3D
 var _arma: Node3D
 var _destello: OmniLight3D
+var _modelo: Cuerpo
+var _pasos: float = 0.0
 var _alto_actual: float = ALTURA_PIE
 var _asomar: float = 0.0
 var _enfriar_disparo: float = 0.0
@@ -69,26 +73,21 @@ func _ready() -> void:
 	_pivote.add_child(_camara)
 	_armar_pistola()
 	_arma.visible = false
+	_modelo = Cuerpo.crear("polo")
+	_modelo.visible = false
+	add_child(_modelo)
 
 
 func _armar_pistola() -> void:
 	_arma = Node3D.new()
 	_arma.position = Vector3(0.2, -0.17, -0.5)
-	_arma.scale = Vector3.ONE * 0.6
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color("1a1b1e")
-	mat.metallic = 0.7
-	mat.roughness = 0.4
-	for parte: Array in [[Vector3(0.05, 0.08, 0.26), Vector3.ZERO], [Vector3(0.05, 0.14, 0.07), Vector3(0, -0.09, 0.08)]]:
-		var m := MeshInstance3D.new()
-		var caja := BoxMesh.new()
-		caja.size = parte[0]
-		m.mesh = caja
-		m.position = parte[1]
-		m.material_override = mat
-		_arma.add_child(m)
+	var escena: PackedScene = load("res://modelos/pistola.glb")
+	var pistola := escena.instantiate() as Node3D
+	pistola.rotation_degrees.y = 90.0
+	pistola.scale = Vector3.ONE * 0.16
+	_arma.add_child(pistola)
 	_destello = OmniLight3D.new()
-	_destello.position.z = -0.25
+	_destello.position.z = -0.3
 	_destello.light_color = Color("ffcf7a")
 	_destello.light_energy = 0.0
 	_destello.omni_range = 6.0
@@ -106,6 +105,10 @@ func cambiar_a_mostro(pos: Vector3, mirar_a: Vector3) -> void:
 	vida = 100
 	balas = BALAS
 	vida_cambio.emit()
+	_modelo.queue_free()
+	_modelo = Cuerpo.crear("mostro")
+	_modelo.visible = false
+	add_child(_modelo)
 	look_at(Vector3(mirar_a.x, global_position.y, mirar_a.z), Vector3.UP)
 	_pivote.rotation.x = 0.0
 	_cancelar_uso()
@@ -114,6 +117,25 @@ func cambiar_a_mostro(pos: Vector3, mirar_a: Vector3) -> void:
 func recibir_dano(cantidad: int) -> void:
 	vida = maxi(vida - cantidad, 0)
 	vida_cambio.emit()
+	herido.emit()
+	Sfx.plano(self, "carne", -2.0)
+
+
+## En las escenas de cine se ve el cuerpo; jugando, se oculta para no tapar la cámara.
+func mostrar_modelo(visible_ahora: bool, animacion: String = "Idle") -> void:
+	_modelo.visible = visible_ahora
+	_modelo.reproducir(animacion)
+	if personaje == Personaje.MOSTRO:
+		_arma.visible = not visible_ahora
+
+
+func activar_camara() -> void:
+	_camara.make_current()
+
+
+func mirar_hacia(punto: Vector3) -> void:
+	look_at(Vector3(punto.x, global_position.y, punto.z), Vector3.UP)
+	_pivote.rotation.x = 0.0
 
 
 func punto_cabeza() -> Vector3:
@@ -174,6 +196,11 @@ func _mover(delta: float, bloqueado: bool) -> void:
 		if _ruido_pasos <= 0.0:
 			_ruido_pasos = 0.4
 			_hacer_ruido(9.0)
+	if is_on_floor() and Vector2(velocity.x, velocity.z).length() > 0.5:
+		_pasos -= delta
+		if _pasos <= 0.0:
+			_pasos = 0.32 if corriendo else (0.7 if agachado else 0.48)
+			Sfx.plano(self, "paso", -6.0 if corriendo else (-22.0 if agachado else -13.0))
 	# Balanceo leve de cámara al andar.
 	var horizontal: float = Vector2(velocity.x, velocity.z).length()
 	_balanceo += delta * horizontal * 2.4
@@ -265,15 +292,19 @@ func _arma_logica(delta: float) -> void:
 			disparo_realizado.emit()
 		return
 	if Input.is_action_just_pressed("recargar") and balas < BALAS:
-		_recargando = 1.4
-		disparo_realizado.emit()
+		_iniciar_recarga()
 		return
 	if Input.is_action_just_pressed("disparar") and _enfriar_disparo <= 0.0:
 		if balas <= 0:
-			_recargando = 1.4
-			disparo_realizado.emit()
+			_iniciar_recarga()
 			return
 		disparar()
+
+
+func _iniciar_recarga() -> void:
+	_recargando = 1.4
+	Sfx.plano(self, "recarga", -2.0)
+	disparo_realizado.emit()
 
 
 func disparar() -> void:
@@ -283,9 +314,26 @@ func disparar() -> void:
 	_pivote.rotation.x = minf(_pivote.rotation.x + 0.012, 1.45)
 	_hacer_ruido(30.0)
 	disparo_realizado.emit()
+	Sfx.plano(self, "disparo", -3.0)
+	var patada := create_tween()
+	patada.tween_property(_arma, "position:z", -0.44, 0.04)
+	patada.tween_property(_arma, "position:z", -0.5, 0.14)
 	var desde: Vector3 = _camara.global_position
-	var hasta: Vector3 = desde - _camara.global_basis.z * 60.0
-	var q := PhysicsRayQueryParameters3D.create(desde, hasta, Juego.CAPA_MUNDO | Juego.CAPA_ENEMIGO)
+	var direccion: Vector3 = -_camara.global_basis.z
+	var q := PhysicsRayQueryParameters3D.create(desde, desde + direccion * 60.0, Juego.CAPA_MUNDO | Juego.CAPA_IMPACTO)
+	q.collide_with_areas = true
 	var r: Dictionary = get_world_3d().direct_space_state.intersect_ray(q)
-	if not r.is_empty() and r["collider"] is Guardia:
-		(r["collider"] as Guardia).recibir_dano(DANO_DISPARO)
+	var boca: Vector3 = _destello.global_position
+	if r.is_empty():
+		Efectos.trazadora(get_parent(), boca, desde + direccion * 60.0)
+		return
+	var punto: Vector3 = r["position"]
+	Efectos.trazadora(get_parent(), boca, punto)
+	if r["collider"] is Guardia.ZonaImpacto:
+		var zona := r["collider"] as Guardia.ZonaImpacto
+		var dueno: Guardia = zona.dueno
+		dueno.recibir_dano(zona.dano, punto, direccion)
+		impacto_enemigo.emit(dueno.estado == Guardia.Estado.MUERTO)
+	else:
+		Efectos.chispa(get_parent(), punto, r["normal"] as Vector3)
+		Sfx.en(get_parent(), "impacto", punto, -6.0, 15.0)

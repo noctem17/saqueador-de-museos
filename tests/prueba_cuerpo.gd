@@ -60,6 +60,23 @@ func mirar(jug: Jugador, punto: Vector3) -> void:
 	piv.rotation.x = atan2(punto.y - cab.y, Vector2(punto.x - cab.x, punto.z - cab.z).length())
 
 
+## Busca una posición libre alrededor del objeto desde la que el rayo lo alcance.
+func _acercarse(j: Jugador, objeto: Node3D) -> bool:
+	for direccion: Vector3 in [Vector3.RIGHT, Vector3.LEFT, Vector3.FORWARD, Vector3.BACK]:
+		for dist: float in [1.0, 0.75]:
+			var pos: Vector3 = objeto.global_position + direccion * dist
+			j.global_position = Vector3(pos.x, 0.1, pos.z)
+			j.velocity = Vector3.ZERO
+			await frames(3)
+			if j.global_position.distance_to(Vector3(pos.x, j.global_position.y, pos.z)) > 0.2:
+				continue
+			mirar(j, objeto.global_position + Vector3.UP * 0.07)
+			await frames(3)
+			if j.objetivo_uso == objeto:
+				return true
+	return false
+
+
 func quitar_peligros() -> void:
 	for g: Node in get_tree().get_nodes_in_group("guardias"):
 		g.process_mode = Node.PROCESS_MODE_DISABLED
@@ -230,20 +247,23 @@ func _correr() -> void:
 			await foto("03_marco_vacio")
 	revisar("agenda tachada", Juego.faltantes() == 0)
 
-	# Coleccionable y lectura.
+	# Todos los escondites de coleccionables se pueden alcanzar y mirar.
 	var coleccionable: Node3D = null
 	for h: Node in mision.get_children():
 		if h is Mision.Otros.Coleccionable:
 			coleccionable = h
 			break
+	for slot: Array in MapaPrueba.SLOTS_COLECCIONABLE:
+		var sitio := Vector3(slot[0], slot[1], slot[2])
+		coleccionable.global_position = sitio
+		await frames(2)
+		var alcanzable: bool = await _acercarse(j, coleccionable)
+		revisar("coleccionable alcanzable en %s" % sitio, alcanzable)
 	var antes: int = Juego.bolso.size()
-	j.global_position = Vector3(coleccionable.global_position.x, 0.1, coleccionable.global_position.z) - Vector3(coleccionable.global_position.x, 0, coleccionable.global_position.z).normalized() * 1.0
-	await frames(3)
-	mirar(j, coleccionable.global_position + Vector3.UP * 0.2)
-	await frames(3)
+	await _acercarse(j, coleccionable)
 	revisar("mira coleccionable", j.objetivo_uso == coleccionable, j.texto_uso)
 	Input.action_press("interactuar")
-	await frames(45)
+	await frames(40)
 	Input.action_release("interactuar")
 	await frames(2)
 	revisar("coleccionable al bolso", Juego.bolso.size() == antes + 1)
@@ -256,7 +276,7 @@ func _correr() -> void:
 	revisar("cerrar reanuda", not get_tree().paused)
 
 	# Camioneta: gana.
-	j.global_position = MapaPrueba.POS_CAMIONETA + Vector3(-2.2, 0.1, 0)
+	j.global_position = MapaPrueba.POS_CAMIONETA + Vector3(0, 0.1, 2.1)
 	await frames(3)
 	mirar(j, MapaPrueba.POS_CAMIONETA + Vector3.UP * 1.0)
 	await frames(3)
@@ -265,7 +285,8 @@ func _correr() -> void:
 	Input.action_press("interactuar")
 	await frames(75)
 	Input.action_release("interactuar")
-	await frames(260)
+	await foto("05b_huida")
+	await frames(300)
 	await get_tree().process_frame
 	revisar("resultado completo tras huir", Juego.resultado == "completo", Juego.resultado)
 	await frames(10)
@@ -310,12 +331,42 @@ func _correr() -> void:
 	revisar("el disparo gasta bala", j.balas == balas - 1)
 	revisar("el disparo abate al guardia", g2.estado == Guardia.Estado.MUERTO)
 
+	# Los tiros aciertan en cabeza, torso y piernas, no solo en el centro.
+	for alto_tiro: Array in [[1.72, 3], [1.13, 1], [0.35, 1]]:
+		var blanco: Guardia = get_tree().get_nodes_in_group("guardias")[0]
+		blanco.vida = 5
+		j.global_position = blanco.global_position + Vector3(0, 0.1, 3.5)
+		await frames(2)
+		mirar(j, blanco.global_position + Vector3.UP * (alto_tiro[0] as float))
+		await frames(2)
+		j.disparar()
+		await frames(2)
+		revisar("tiro a altura %s" % alto_tiro[0], blanco.vida == 5 - (alto_tiro[1] as int), blanco.vida)
+	var ultimo: Guardia = get_tree().get_nodes_in_group("guardias")[0]
+	for g: Node in get_tree().get_nodes_in_group("guardias"):
+		g.process_mode = Node.PROCESS_MODE_DISABLED
+	ultimo.process_mode = Node.PROCESS_MODE_INHERIT
+	ultimo.vida = 1
+	var hacia_g: Vector3 = (ultimo.global_position - pos_polo).normalized()
+	j.global_position = ultimo.global_position - Vector3(hacia_g.x, 0, hacia_g.z) * 1.8 + Vector3.UP * 0.1
+	await frames(2)
+	mirar(j, ultimo.global_position + Vector3.UP * 1.1)
+	await frames(2)
+	j.disparar()
+	await frames(4)
+	await foto_pausada("08_sangre")
+	await frames(170)
+	revisar("el guardia cae", ultimo.estado == Guardia.Estado.MUERTO)
+	mirar(j, ultimo.global_position + Vector3.UP * 0.1)
+	await foto("09_charco")
+
 	quitar_peligros()
 	j.global_position = pos_polo + Vector3(1.4, 0, 0)
 	await frames(3)
 	mirar(j, pos_polo + Vector3.UP * 0.6)
 	await frames(3)
 	revisar("Mostro encuentra a Polo", j.objetivo_uso == mision.polo_escondido, j.texto_uso)
+	await foto("10_polo_escondido")
 	Input.action_press("interactuar")
 	await frames(75)
 	Input.action_release("interactuar")
