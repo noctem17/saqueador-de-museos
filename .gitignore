@@ -2,6 +2,9 @@
 .godot/
 /android/
 override.cfg
-.claude/settings.local.json
+.claude/
+CLAUDE.md
+.mcp.json
+.vscode/
 /capturas/
 /exportar/

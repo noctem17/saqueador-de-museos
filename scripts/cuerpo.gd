@@ -141,7 +141,7 @@ func _recolorear(colores: Dictionary) -> void:
 		var malla := nodo as MeshInstance3D
 		for s: int in malla.mesh.get_surface_count():
 			var original: Material = malla.get_active_material(s)
-			var nombre: String = original.resource_name
+			var nombre: String = original.resource_name.get_slice(".", 0)   # Blender puede crear "Suit.001".
 			if not colores.has(nombre):
 				continue
 			var clave: String = "%s/%s" % [tipo, nombre]

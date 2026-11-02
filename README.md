@@ -28,7 +28,9 @@ Juego 3D en Godot 4.7 para la clase de historia y cultura colombiana. Polo entra
 - `scripts/mapa_prueba.gd`: mapa provisional, definido con listas de muros, puertas y posiciones.
 - `arte/`: imágenes de las obras, con el nombre del `id` de cada una (por ejemplo `violencia.jpg`).
 - `modelos/` y `audio/`: modelos 3D y sonidos. Las licencias están en [docs/CREDITOS.md](docs/CREDITOS.md).
-- `docs/GUIA_EQUIPO.md`: qué puede aportar cada integrante y en qué formato.
+- `aportes/`: archivos que sube el equipo, antes de pasar al juego. Godot ignora esta carpeta.
+- `docs/GUIA_EQUIPO.md`: qué puede aportar cada integrante.
+- `docs/GUIA_MODELOS.md`: cómo modificar un modelo con Blender.
 - `tests/`: prueba automática que juega la misión completa.
 
 Para correr la prueba automática:

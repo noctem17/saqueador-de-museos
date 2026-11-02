@@ -1,15 +1,21 @@
 class_name Sfx
 extends RefCounted
-## Reproducción de sonidos. Cada sonido es audio/<nombre>.wav, así que para cambiar
-## uno basta con reemplazar el archivo por otro con el mismo nombre.
+## Reproducción de sonidos. Cada sonido es audio/<nombre> en WAV, OGG o MP3, así que
+## para cambiar uno basta con reemplazar el archivo por otro con el mismo nombre.
+
+const FORMATOS: Array[String] = ["wav", "ogg", "mp3"]
 
 static var _cache: Dictionary[String, AudioStream] = {}
 
 
 static func _flujo(nombre: String) -> AudioStream:
 	if not _cache.has(nombre):
-		var ruta: String = "res://audio/%s.wav" % nombre
-		_cache[nombre] = load(ruta) as AudioStream if ResourceLoader.exists(ruta) else null
+		_cache[nombre] = null
+		for ext: String in FORMATOS:
+			var ruta: String = "res://audio/%s.%s" % [nombre, ext]
+			if ResourceLoader.exists(ruta):
+				_cache[nombre] = load(ruta) as AudioStream
+				break
 	return _cache[nombre]
 
 
@@ -47,13 +53,17 @@ static func plano(padre: Node, nombre: String, volumen_db: float = 0.0) -> void:
 
 ## Sonido en bucle (alarma, ambiente). Devuelve el reproductor para poder detenerlo.
 static func bucle(padre: Node, nombre: String, volumen_db: float = 0.0) -> AudioStreamPlayer:
-	var original := _flujo(nombre) as AudioStreamWAV
 	var p := AudioStreamPlayer.new()
+	var original: AudioStream = _flujo(nombre)
 	if original != null:
-		var flujo := original.duplicate() as AudioStreamWAV
-		flujo.loop_mode = AudioStreamWAV.LOOP_FORWARD
-		flujo.loop_begin = 0
-		flujo.loop_end = int(flujo.get_length() * flujo.mix_rate)
+		var flujo := original.duplicate() as AudioStream
+		if flujo is AudioStreamWAV:
+			var wav := flujo as AudioStreamWAV
+			wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
+			wav.loop_begin = 0
+			wav.loop_end = int(wav.get_length() * wav.mix_rate)
+		else:
+			flujo.set("loop", true)   # OGG y MP3 usan esta propiedad.
 		p.stream = flujo
 	p.volume_db = volumen_db
 	padre.add_child(p)
