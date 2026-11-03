@@ -2,7 +2,7 @@
 
 ## Modelos 3D (licencia CC0, dominio público)
 
-Descargados de [Poly Pizza](https://poly.pizza). Los colores de piel, ropa y carrocería se cambian desde el juego, y la barba de Mostro se agrega con código.
+Descargados de [Poly Pizza](https://poly.pizza). Los colores de piel, ropa y carrocería se cambian desde el juego, y a Mostro se le cambió el pelo y se le agregó barba en Blender.
 
 | Archivo | En el juego | Modelo original | Autor |
 |---|---|---|---|

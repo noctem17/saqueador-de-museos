@@ -43,14 +43,14 @@ El juego repinta algunos materiales por código, así que cambiarlos en Blender 
 | Personaje | Materiales que pinta el juego |
 |---|---|
 | Polo | `Skin`, `Hair`, `Eyebrows`, `Purple`, `LightBlue` |
-| Mostro | `Skin`, `Hair`, `Eyebrows`, `Suit`, `Tie` |
+| Mostro | `Skin`, `Hair`, `Eyebrows`, `Beard`, `Suit`, `Tie` |
 | Guardia | `LightBrown`, `LightBlue`, `Red_Dark`, `White`, `Hair` |
 
 Para cambiar uno de esos colores, escríbanlo en un `.txt` junto al modelo, por ejemplo "traje gris oscuro". Las piezas nuevas sí conservan el color que les pongan en Blender, si usan un material nuevo con otro nombre.
 
-## La barba de Mostro
+## La barba y el pelo de Mostro
 
-La barba actual la arma el código con tres esferas y de perfil se nota. Si alguien modela una barba, se pega al hueso `Head` y se quita la del código con un cambio de una línea.
+La barba y el pelo corto con entradas son copias de la piel de la cabeza, separadas unos milímetros y pintadas. Por eso calzan con la cara y se mueven con ella. Para seguir editando a Mostro, abran `aportes/modelos/mostro_barba-y-entradas.blend` en vez del `.glb`.
 
 ## Otros modelos
 

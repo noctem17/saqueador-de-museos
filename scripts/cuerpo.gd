@@ -13,8 +13,7 @@ const TIPOS: Dictionary[String, Dictionary] = {
 	},
 	"mostro": {
 		"modelo": "res://modelos/mostro.glb",
-		"colores": {"Skin": "e8c4a6", "Hair": "4a3626", "Eyebrows": "33261b", "Suit": "1b1e26", "Tie": "7a1420"},
-		"barba": true,
+		"colores": {"Skin": "e8c4a6", "Hair": "1e1814", "Eyebrows": "1e1814", "Beard": "241a14", "Suit": "1b1e26", "Tie": "7a1420"},
 	},
 	"guardia": {
 		"modelo": "res://modelos/guardia.glb",
@@ -58,8 +57,6 @@ func _ready() -> void:
 		_anim.get_animation(PREFIJO + nombre).loop_mode = Animation.LOOP_LINEAR
 	_anim.animation_finished.connect(_al_terminar)
 	_recolorear(datos["colores"] as Dictionary)
-	if datos.get("barba", false):
-		_poner_barba()
 	if datos.get("arma", false):
 		_arma_mano = _poner_pistola("Wrist.R", Vector3(-0.02, 0.09, 0.03), Vector3(0, 90, 90))
 		_arma_cadera = _poner_pistola("Hips", Vector3(-0.2, 0.0, 0.03), Vector3(0, 0, -90))
@@ -174,23 +171,3 @@ func _poner_pistola(hueso: String, pos: Vector3, giro: Vector3) -> Node3D:
 	arma.scale = Vector3.ONE * 0.13
 	return arma
 
-
-func _poner_barba() -> void:
-	var adjunto: Node3D = _adjunto("Head")
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color("2e2118")
-	mat.roughness = 1.0
-	for parte: Array in [
-		[Vector3(0.15, 0.085, 0.095), Vector3(0, 0.055, 0.07)],    # Mandíbula
-		[Vector3(0.085, 0.05, 0.06), Vector3(0, 0.02, 0.1)],       # Mentón
-		[Vector3(0.07, 0.016, 0.022), Vector3(0, 0.088, 0.128)],   # Bigote
-	]:
-		var m := MeshInstance3D.new()
-		var esfera := SphereMesh.new()
-		esfera.radial_segments = 8
-		esfera.rings = 5
-		m.mesh = esfera
-		m.scale = parte[0]
-		m.position = parte[1]
-		m.material_override = mat
-		adjunto.add_child(m)
