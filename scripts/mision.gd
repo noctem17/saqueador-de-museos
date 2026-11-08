@@ -66,6 +66,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	jugador.dentro = mapa.es_interior(jugador.global_position)
 	if not Juego.control_bloqueado and not _terminado:
 		Juego.tiempo_mision += delta
 		_avisar_zona(delta)

@@ -6,6 +6,8 @@ extends RefCounted
 
 static func ve_jugador(espacio: PhysicsDirectSpaceState3D, ojo: Vector3, adelante: Vector3,
 		jugador: Jugador, alcance: float, medio_angulo: float) -> bool:
+	if not jugador.dentro:
+		return false   # En la calle o en los jardines nadie sospecha de él.
 	var a_jugador: Vector3 = jugador.punto_pecho() - ojo
 	if a_jugador.length() > alcance:
 		return false

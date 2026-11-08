@@ -26,6 +26,8 @@ const SENSIBILIDAD: float = 0.0025
 var personaje: Personaje = Personaje.POLO
 var polo_rescatado: bool = false
 var agachado: bool = false
+## Afuera de la muralla Polo es un peatón más: ni lo ven ni lo oyen. La misión lo actualiza.
+var dentro: bool = true
 var corriendo: bool = false
 var vida: int = 100
 var balas: int = BALAS
@@ -208,7 +210,8 @@ func _mover(delta: float, bloqueado: bool) -> void:
 
 
 func _hacer_ruido(radio: float) -> void:
-	Juego.ruido.emit(global_position, radio)
+	if dentro or personaje != Personaje.POLO:
+		Juego.ruido.emit(global_position, radio)
 
 
 func _agacharse(delta: float, bloqueado: bool) -> void:

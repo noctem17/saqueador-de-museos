@@ -312,6 +312,14 @@ func _correr() -> void:
 	# Alarma: entra Mostro, dispara, rescata y huye.
 	await nueva()
 	j = mision.jugador
+	# Afuera del museo nadie lo detecta, aunque un guardia lo tenga de frente.
+	var g_fuera: Guardia = get_tree().get_nodes_in_group("guardias")[0]
+	g_fuera.ruta = []
+	j.global_position = mision.mapa.spawn_polo
+	g_fuera.global_position = mision.mapa.spawn_polo + Vector3(0, 0, -3)
+	g_fuera.look_at(Vector3(j.global_position.x, g_fuera.global_position.y, j.global_position.z), Vector3.UP)
+	await frames(150)
+	revisar("afuera del museo no lo detectan", not Juego.alarma and not j.dentro, g_fuera.sospecha)
 	var pos_polo: Vector3 = mision.mapa.punto_prueba
 	j.global_position = pos_polo
 	await frames(5)

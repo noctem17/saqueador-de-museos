@@ -118,6 +118,12 @@ func construir() -> void:
 
 # ================================================================ ayudas
 
+## Dentro de la muralla (patios incluidos). La plaza, los jardines y la calle son afuera.
+func es_interior(pos: Vector3) -> bool:
+	return absf(pos.x) < 64.0 and pos.z > -64.0 and pos.z < 36.6
+
+
+
 ## Punto del mundo a partir de coordenadas de un brazo: s a lo largo, t de costado.
 func _w(b: Dictionary, s: float, t: float, y: float) -> Vector3:
 	return (b["u"] as Vector3) * s + (b["v"] as Vector3) * t + Vector3.UP * y
@@ -161,9 +167,9 @@ func _ventana(p: Vector3, giro: float, ancho: float = 0.9, alto: float = 1.45) -
 	reja(p + Basis(Vector3.UP, g) * Vector3(0, 0, 0.03), g, ancho, alto, hierro, 0.15)
 
 
-func _arbol(x: float, z: float, y: float = 0.0, florido: bool = false) -> void:
+func _arbol(x: float, z: float, y: float = 0.0) -> void:
 	cilindro(0.28, 4.4, Vector3(x, y, z), Color("4a3a2a"), 7)
-	var copa: Material = material(Color("7b5aa8") if florido else Color("2f4a26"))
+	var copa: Material = material(Color("2f4a26"))
 	esfera(2.3, Vector3(x, y + 5.2, z), copa)
 	esfera(1.6, Vector3(x + 1.1, y + 4.5, z + 0.6), copa)
 	esfera(1.5, Vector3(x - 0.9, y + 4.7, z - 0.7), copa)
@@ -228,11 +234,11 @@ func _terreno() -> void:
 			var cx: float = (17.0 + j * 8.5) * lado
 			caja(Vector3(6.5, 0.5, 2.6), Vector3(cx, Y_CALLE + 0.25, 50.4), Color("7d705a"))
 			caja(Vector3(6.2, 0.4, 2.3), Vector3(cx, Y_CALLE + 0.7, 50.4), Color("35552a"), false)
-		# Árboles: guayacanes morados en los prados y una fila sobre la acera.
+		# Árboles en los prados y una fila sobre la acera.
 		for x: float in [20.0, 31.0, 44.0, 56.0]:
-			_arbol(x * lado, 41.5 + (1.5 if int(x) % 2 == 0 else -1.0), 0.15, true)
+			_arbol(x * lado, 41.5 + (1.5 if int(x) % 2 == 0 else -1.0), 0.15)
 		for x: float in [16.0, 34.0, 52.0]:
-			_arbol(x * lado, 53.2, Y_CALLE, false)
+			_arbol(x * lado, 53.2, Y_CALLE)
 	# Escalinata central, de la plaza a la acera.
 	escalera(Vector3(0, 0, 46.0), Vector3(0, Y_CALLE, 50.0), 16.0, piedra_oscura)
 	# Estatua sobre pedestal en el prado oriental.

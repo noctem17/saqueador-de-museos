@@ -64,6 +64,11 @@ func base_y(piso: int) -> float:
 	return piso * alto_piso
 
 
+## Si un punto está dentro del museo (ahí sí vigilan los guardias y las cámaras).
+func es_interior(_pos: Vector3) -> bool:
+	return true
+
+
 ## Nombre de la zona donde está un punto, por ejemplo "Piso 2 · Sala 8".
 func zona_en(pos: Vector3) -> String:
 	for z: Array in zonas:
