@@ -21,6 +21,9 @@ extends Mapa
 
 const H: float = 4.5
 const PISOS: int = 3
+## Los muros de cada piso quedan unos centímetros más bajos que el piso de arriba. Si
+## llegaran justo a su altura, la tarjeta no sabría qué dibujar encima y parpadearía.
+const HM: float = H - 0.08
 const Y_TECHO: float = 13.5
 const Y_CALLE: float = -1.8
 const LARGO_BRAZO: float = 58.0
@@ -145,7 +148,7 @@ func _muro_brazo(b: Dictionary, t: float, puertas_s: Array, y0: float, mat: Mate
 	var puertas: Array = []
 	for s: float in puertas_s:
 		puertas.append(s * signo)
-	muro(horizontal, fijo, a, c, puertas, H, mat, zocalo, y0, grosor, ancho_p, alto_p)
+	muro(horizontal, fijo, a, c, puertas, HM, mat, zocalo, y0, grosor, ancho_p, alto_p)
 
 
 ## Ventana de celda: hueco oscuro en arco con reja. p es el centro de abajo, sobre
@@ -325,12 +328,12 @@ func _centro() -> void:
 	for f: int in PISOS:
 		var y0: float = f * H
 		for d: Array in diagonales:
-			muro_diagonal(d[0], d[1], H, piedra, y0, 0.6)
+			muro_diagonal(d[0], d[1], HM, piedra, y0, 0.6)
 		# Lados hacia los brazos y la escalera, con una abertura amplia.
-		muro(true, -10.0, -6.5, 6.5, [0.0], H, estuco, true, y0, GROSOR, 5.0, 3.6)
-		muro(true, 10.0, -6.5, 6.5, [0.0], H, estuco, true, y0, GROSOR, 5.0, 3.6)
-		muro(false, -10.0, -6.5, 6.5, [0.0], H, estuco, true, y0, GROSOR, 5.0, 3.6)
-		muro(false, 10.0, -6.5, 6.5, [0.0], H, estuco, true, y0, GROSOR, 5.0, 3.6)
+		muro(true, -10.0, -6.5, 6.5, [0.0], HM, estuco, true, y0, GROSOR, 5.0, 3.6)
+		muro(true, 10.0, -6.5, 6.5, [0.0], HM, estuco, true, y0, GROSOR, 5.0, 3.6)
+		muro(false, -10.0, -6.5, 6.5, [0.0], HM, estuco, true, y0, GROSOR, 5.0, 3.6)
+		muro(false, 10.0, -6.5, 6.5, [0.0], HM, estuco, true, y0, GROSOR, 5.0, 3.6)
 		if f == 0:
 			suelo(-10, -10, 10, 10, baldosa, 0.02)
 		else:
@@ -370,7 +373,8 @@ func _losa_octogono(y: float, mat: Material) -> void:
 		var hacia_centro: Vector2 = -medio.normalized()
 		var c: Vector2 = medio + hacia_centro * 1.24
 		var giro: float = -atan2(b.y - a.y, b.x - a.x)
-		caja_mat(Vector3(a.distance_to(b), grosor, 2.48), Vector3(c.x, y - grosor * 0.5, c.y), mat, solida, giro)
+		# Unos milímetros más abajo: esta pieza se monta sobre las otras y no deben coincidir.
+		caja_mat(Vector3(a.distance_to(b), grosor, 2.48), Vector3(c.x, y - 0.004 - grosor * 0.5, c.y), mat, solida, giro)
 
 
 # ================================================================ brazos
@@ -394,7 +398,7 @@ func _brazo(b: Dictionary) -> void:
 				_ventana(_w(b, c, t + signo * 0.31, y_v), _giro(fuera))
 				if f == 0 or k in CELDAS_ABIERTAS:
 					_ventana(_w(b, c, t - signo * 0.31, y_v), _giro(-fuera))
-		_caja_bt(b, LARGO_BRAZO - 0.3, LARGO_BRAZO + 0.3, -MEDIO_BRAZO - 0.3, MEDIO_BRAZO + 0.3, y0, y0 + H, piedra)
+		_caja_bt(b, LARGO_BRAZO - 0.3, LARGO_BRAZO + 0.3, -MEDIO_BRAZO - 0.3, MEDIO_BRAZO + 0.3, y0, y0 + HM, piedra)
 		# Piso.
 		var p0: Vector3 = _w(b, INICIO_BRAZO, -MEDIO_BRAZO, 0)
 		var p1: Vector3 = _w(b, LARGO_BRAZO, MEDIO_BRAZO, 0)
@@ -443,9 +447,9 @@ func _planta_baja(b: Dictionary) -> void:
 	for k: int in range(1, NUM_CELDAS + 1):
 		var s: float = INICIO_BRAZO + CELDA * k
 		for t: float in [-PASILLO, PASILLO]:
-			cilindro(0.32, H, _w(b, s, t, 0), estuco, 8)
+			cilindro(0.32, HM, _w(b, s, t, 0), estuco, 8)
 	for t: float in [-PASILLO, PASILLO]:
-		_caja_bt(b, INICIO_BRAZO, LARGO_BRAZO, t - 0.2, t + 0.2, H - 0.45, H, estuco, false)
+		_caja_bt(b, INICIO_BRAZO, LARGO_BRAZO, t - 0.2, t + 0.2, HM - 0.45, HM, estuco, false)
 	if id == "e":
 		# Sala 6: vitrinas con piezas de oro, en penumbra.
 		var oro := material_brillante(Color("d9a521"), Color("5a3d08"), 1.0)
@@ -479,7 +483,7 @@ func _celdas(b: Dictionary, f: int) -> void:
 	for k: int in range(1, NUM_CELDAS + 1):
 		var s: float = INICIO_BRAZO + CELDA * k
 		for t: Array in [[PASILLO, MEDIO_BRAZO - 0.3], [-(MEDIO_BRAZO - 0.3), -PASILLO]]:
-			_caja_bt(b, s - 0.15, s + 0.15, t[0], t[1], y0, y0 + H, estuco)
+			_caja_bt(b, s - 0.15, s + 0.15, t[0], t[1], y0, y0 + HM, estuco)
 	# Puertas en arco con reja: cerradas o abiertas contra la pared.
 	for k: int in NUM_CELDAS:
 		var c: float = INICIO_BRAZO + CELDA * k + CELDA * 0.5
@@ -510,10 +514,10 @@ func _escalera_principal() -> void:
 	for f: int in PISOS:
 		var y0: float = f * H
 		# Muros de piedra hacia los patios.
-		muro(false, -9.0, 10.0, 22.0, [], H, piedra, false, y0, 0.6)
-		muro(false, 9.0, 10.0, 22.0, [], H, piedra, false, y0, 0.6)
-		muro(true, 10.0, -9.0, -6.5, [], H, piedra, false, y0, 0.6)
-		muro(true, 10.0, 6.5, 9.0, [], H, piedra, false, y0, 0.6)
+		muro(false, -9.0, 10.0, 22.0, [], HM, piedra, false, y0, 0.6)
+		muro(false, 9.0, 10.0, 22.0, [], HM, piedra, false, y0, 0.6)
+		muro(true, 10.0, -9.0, -6.5, [], HM, piedra, false, y0, 0.6)
+		muro(true, 10.0, 6.5, 9.0, [], HM, piedra, false, y0, 0.6)
 		if f == 0:
 			suelo(-9, 10, 9, 22, baldosa, 0.02)
 		else:
@@ -534,7 +538,7 @@ func _escalera_principal() -> void:
 		var mitad: float = y0 + H * 0.5
 		escalera(Vector3(-4, y0, 20), Vector3(-4, mitad, 15.5), 3.8, piedra_oscura)
 		caja_mat(Vector3(12.0, GROSOR, 3.0), Vector3(0, mitad - GROSOR * 0.5, 14.0), estuco, true)
-		suelo(-6, 12.5, 6, 15.5, piedra_oscura, mitad - 0.01)
+		suelo(-6, 12.5, 6, 15.5, piedra_oscura, mitad)
 		escalera(Vector3(4, mitad, 15.5), Vector3(4, y0 + H, 20), 3.8, piedra_oscura)
 		for xb: float in [-5.95, -2.05]:
 			baranda(Vector3(xb, y0, 20), Vector3(xb, mitad, 15.5), hierro)
@@ -552,11 +556,11 @@ func _bloque_entrada() -> void:
 	for f: int in PISOS:
 		var y0: float = f * H
 		var puertas_patio: Array = [-20.0] if f == 0 else []
-		muro(true, 22.0, -30.0, -9.0, puertas_patio, H, piedra, false, y0, 0.6)
-		muro(true, 22.0, 9.0, 30.0, [20.0] if f == 0 else [], H, piedra, false, y0, 0.6)
-		muro(true, 22.0, -9.0, 9.0, [0.0], H, piedra, false, y0, 0.6, 6.0 if f == 0 else 3.0, 3.6 if f == 0 else 2.8)
-		muro(false, -30.0, 22.0, 36.0, [], H, piedra, false, y0, 0.6)
-		muro(false, 30.0, 22.0, 36.0, [], H, piedra, false, y0, 0.6)
+		muro(true, 22.0, -30.0, -9.0, puertas_patio, HM, piedra, false, y0, 0.6)
+		muro(true, 22.0, 9.0, 30.0, [20.0] if f == 0 else [], HM, piedra, false, y0, 0.6)
+		muro(true, 22.0, -9.0, 9.0, [0.0], HM, piedra, false, y0, 0.6, 6.0 if f == 0 else 3.0, 3.6 if f == 0 else 2.8)
+		muro(false, -30.0, 22.0, 36.0, [], HM, piedra, false, y0, 0.6)
+		muro(false, 30.0, 22.0, 36.0, [], HM, piedra, false, y0, 0.6)
 		if f > 0:
 			for xv: float in [-25.0, -15.0, 15.0, 25.0]:
 				_ventana(Vector3(xv, y0 + 1.9, 21.69), 180.0)
@@ -570,11 +574,11 @@ func _bloque_entrada() -> void:
 	losa(-30, 22, 30, 36, Y_TECHO, GROSOR, estuco)
 
 	# Piso 1: vestíbulo "Historia del Panóptico" con columnas, sala 1 y vigilancia.
-	muro(false, -12.0, 22.0, 36.0, [29.0], H, estuco, true)
-	muro(false, 12.0, 22.0, 36.0, [29.0], H, estuco, true)
+	muro(false, -12.0, 22.0, 36.0, [29.0], HM, estuco, true)
+	muro(false, 12.0, 22.0, 36.0, [29.0], HM, estuco, true)
 	for xc: float in [-5.0, 5.0]:
 		for zc: float in [25.0, 28.0, 31.0, 34.0]:
-			cilindro(0.35, H, Vector3(xc, 0, zc), estuco, 10)
+			cilindro(0.35, HM, Vector3(xc, 0, zc), estuco, 10)
 	caja(Vector3(0.8, 1.1, 4.0), Vector3(-8.5, 0.55, 30.0), Color("4a3524"))
 	var pantalla := material_brillante(Color("0e2233"), Color("4fb3e0"), 1.0)
 	for zk: float in [24.0, 27.0]:
@@ -593,8 +597,8 @@ func _bloque_entrada() -> void:
 	caja(Vector3(0.08, 1.3, 1.7), Vector3(-29.6, 0.65, 29.0), Color("d8d2c6"))
 	zonas.append([-30.0, 22.0, -12.0, 37.2, 0, "Piso 1 · Sala 1 · La historia del museo (cerrada por montaje)"])
 	# Taquilla y cuarto de vigilancia con la consola que apaga las cámaras.
-	muro(false, 22.0, 22.0, 28.0, [25.0], H, estuco, true)
-	muro(true, 28.0, 22.0, 30.0, [], H, estuco, true)
+	muro(false, 22.0, 22.0, 28.0, [25.0], HM, estuco, true)
+	muro(true, 28.0, 22.0, 30.0, [], HM, estuco, true)
 	caja(Vector3(2.0, 0.8, 0.8), Vector3(26.0, 0.4, 22.8), Color("23262b"))
 	banca(17.0, 34.5, 0.0)
 	zonas.append([12.0, 22.0, 30.0, 37.2, 0, "Piso 1 · Taquilla y vigilancia"])
@@ -624,7 +628,7 @@ func _patios() -> void:
 	# de varios platos, árboles y una arcada contra el bloque de entrada.
 	suelo(-64, 6.5, -9, 22, material(Color("2f4a26"), 0.95), 0.012)
 	suelo(-64, 13.0, -30, 15.5, ladrillo, 0.02)
-	suelo(-47.5, 6.5, -45.0, 22.0, ladrillo, 0.02)
+	suelo(-47.5, 6.5, -45.0, 22.0, ladrillo, 0.026)
 	suelo(-30, 18.5, -9, 22.0, ladrillo, 0.02)
 	var f := Vector3(-36.0, 0, 14.0)
 	var fuente := material(Color("6b5f50"))

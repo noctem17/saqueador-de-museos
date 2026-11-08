@@ -22,6 +22,8 @@ const VISTAS: Array = [
 	["museo_13_sala7_p2", Vector3(26, 6.2, 34), Vector3(0, 6, 26)],
 	["museo_14_temporal_p3", Vector3(-26, 10.7, 34), Vector3(0, 10.5, 26)],
 	["museo_15_rampa", Vector3(44, -0.2, 51), Vector3(20, 0, 46)],
+	["museo_16_piso_celdas_p2", Vector3(0.3, 6.0, -19.0), Vector3(2.6, 4.5, -25.0)],
+	["museo_17_piso_celdas_p3", Vector3(-19.0, 10.5, 0.3), Vector3(-25.0, 9.0, 2.6)],
 ]
 
 
