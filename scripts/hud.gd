@@ -433,13 +433,19 @@ func _refrescar_agenda() -> void:
 	for i: int in mini(Juego.anotadas, Juego.lista.size()):
 		var o: Dictionary = Juego.lista[i]
 		var titulo: String = o["titulo"]
+		var donde: String = Juego.ubicaciones.get(o["id"], "")
+		if donde != "":
+			titulo += " [color=#8a8170][font_size=13]· %s[/font_size][/color]" % donde.get_slice(" · ", 0)
 		cuerpo += "[s]%s[/s]\n" % titulo if o["id"] in Juego.robadas else "%s\n" % titulo
 	_agenda_mini.text = cuerpo.strip_edges()
 
 	var detalle: String = ""
 	for i: int in mini(Juego.anotadas, Juego.lista.size()):
 		var o: Dictionary = Juego.lista[i]
+		var donde: String = Juego.ubicaciones.get(o["id"], "")
 		var linea: String = "[b]%s[/b]\n%s\n[i]«%s»[/i]" % [o["titulo"], Juego.credito(o), o["razon"]]
+		if donde != "":
+			linea += "\n[color=#7a5a2a]Está en: %s[/color]" % donde
 		detalle += ("[s]%s[/s]" % linea if o["id"] in Juego.robadas else linea) + "\n\n"
 	_agenda_grande.text = detalle
 

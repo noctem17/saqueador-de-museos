@@ -1,21 +1,27 @@
 extends Node3D
-## Fotos del Museo Nacional desde puntos fijos, para revisar el mapa sin jugar.
-## Ejecutar con ventana:  Godot_console --path . tests/vistas_museo.tscn
+## Fotos del Museo Nacional desde puntos fijos, para revisar el mapa sin jugar, y
+## FPS medidos en cada punto.
+## Ejecutar con ventana:  Godot_console --path . --disable-vsync tests/vistas_museo.tscn
 ## Las imágenes quedan en capturas/museo_*.png
 
 const VISTAS: Array = [
 	# [archivo, posición de la cámara, punto al que mira]
-	["museo_00_aerea", Vector3(48, 62, 72), Vector3(0, 0, 8)],
-	["museo_01_fachada", Vector3(9, 1.7, 45), Vector3(-2, 3.5, 30)],
-	["museo_02_hall", Vector3(5, 1.7, 28.5), Vector3(-3, 1.4, 19)],
-	["museo_03_vestibulo", Vector3(0, 1.7, 17.2), Vector3(0, 1.6, 6)],
-	["museo_04_centro", Vector3(-5, 1.8, 5), Vector3(4, 2.2, -6)],
-	["museo_05_brazo_norte", Vector3(1.5, 1.7, -9), Vector3(-1, 1.6, -28)],
-	["museo_06_sala_oro", Vector3(9, 1.7, 1.5), Vector3(28, 1.2, -2)],
-	["museo_07_salas_2_3", Vector3(-9, 1.7, -1.5), Vector3(-28, 1.4, 1)],
-	["museo_08_patio_fuente", Vector3(-9, 1.7, 9), Vector3(-20, 1.5, 13)],
-	["museo_09_sala_5", Vector3(9.5, 1.7, 19.5), Vector3(20, 1.2, 27)],
-	["museo_10_sala_1", Vector3(-9.5, 1.7, 19.5), Vector3(-22, 1.4, 27)],
+	["museo_00_aerea", Vector3(70, 75, 110), Vector3(0, 0, 0)],
+	["museo_01_calle", Vector3(14, -0.2, 60), Vector3(-2, 5, 36)],
+	["museo_02_fachada", Vector3(-24, 1.5, 48), Vector3(4, 7, 36)],
+	["museo_03_vestibulo", Vector3(6, 1.7, 35), Vector3(-2, 1.8, 23)],
+	["museo_04_escalera", Vector3(7.8, 1.7, 21), Vector3(-2, 3.5, 13)],
+	["museo_05_centro_pozo", Vector3(-7, 1.6, 6.5), Vector3(0, 5.5, -2)],
+	["museo_06_brazo_norte_p1", Vector3(1.0, 1.7, -11), Vector3(0, 1.6, -50)],
+	["museo_07_celdas_p2", Vector3(1.2, 6.2, -11.5), Vector3(-0.5, 5.6, -40)],
+	["museo_08_celda_abierta", Vector3(1.5, 6.2, -18.8), Vector3(5.5, 5.6, -15)],
+	["museo_09_rotonda_p3", Vector3(-6.5, 10.7, 5.5), Vector3(6, 10.5, -6)],
+	["museo_10_sala6_oro", Vector3(11, 1.7, 1.5), Vector3(40, 1.0, -1)],
+	["museo_11_patio_fuente", Vector3(-15, 1.7, 9), Vector3(-38, 3.0, 15)],
+	["museo_12_patio_brazos", Vector3(-30, 1.7, -30), Vector3(-8, 6, -10)],
+	["museo_13_sala7_p2", Vector3(26, 6.2, 34), Vector3(0, 6, 26)],
+	["museo_14_temporal_p3", Vector3(-26, 10.7, 34), Vector3(0, 10.5, 26)],
+	["museo_15_rampa", Vector3(44, -0.2, 51), Vector3(20, 0, 46)],
 ]
 
 
@@ -29,6 +35,7 @@ func _ready() -> void:
 	mision.hud.visible = false
 	var cam := Camera3D.new()
 	cam.fov = 70.0
+	cam.far = 500.0
 	add_child(cam)
 	cam.make_current()
 	await get_tree().create_timer(1.0).timeout
@@ -36,8 +43,7 @@ func _ready() -> void:
 	for v: Array in VISTAS:
 		cam.global_position = v[1]
 		cam.look_at(v[2])
-		cam.far = 400.0
-		for i: int in 4:
-			await RenderingServer.frame_post_draw
+		await get_tree().create_timer(0.8).timeout
+		print("%s  FPS %d  dibujos %d" % [v[0], Engine.get_frames_per_second(), RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)])
 		get_viewport().get_texture().get_image().save_png("res://capturas/%s.png" % v[0])
 	get_tree().quit()

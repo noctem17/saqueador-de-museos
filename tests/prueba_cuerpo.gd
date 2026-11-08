@@ -60,17 +60,23 @@ func mirar(jug: Jugador, punto: Vector3) -> void:
 	piv.rotation.x = atan2(punto.y - cab.y, Vector2(punto.x - cab.x, punto.z - cab.z).length())
 
 
+## Altura del piso donde está un punto (los pisos van cada mision.mapa.alto_piso).
+func piso_y(y: float) -> float:
+	var alto: float = mision.mapa.alto_piso
+	return floorf((y + 0.3) / alto) * alto if y > -0.5 else y - 0.3
+
+
 ## Busca una posición libre alrededor del objeto desde la que el rayo lo alcance.
-func _acercarse(j: Jugador, objeto: Node3D) -> bool:
+func _acercarse(j: Jugador, objeto: Node3D, alto_mira: float = 0.07, distancias: Array = [1.0, 0.75]) -> bool:
 	for direccion: Vector3 in [Vector3.RIGHT, Vector3.LEFT, Vector3.FORWARD, Vector3.BACK]:
-		for dist: float in [1.0, 0.75]:
+		for dist: float in distancias:
 			var pos: Vector3 = objeto.global_position + direccion * dist
-			j.global_position = Vector3(pos.x, 0.1, pos.z)
+			j.global_position = Vector3(pos.x, piso_y(objeto.global_position.y) + 0.1, pos.z)
 			j.velocity = Vector3.ZERO
 			await frames(3)
 			if j.global_position.distance_to(Vector3(pos.x, j.global_position.y, pos.z)) > 0.2:
 				continue
-			mirar(j, objeto.global_position + Vector3.UP * 0.07)
+			mirar(j, objeto.global_position + Vector3.UP * alto_mira)
 			await frames(3)
 			if j.objetivo_uso == objeto:
 				return true
@@ -142,7 +148,7 @@ func _correr() -> void:
 		var plano: Vector3 = -cabeza.global_basis.z
 		plano.y = 0.0
 		var sitio: Vector3 = cabeza.global_position + plano.normalized() * 6.0
-		mision.jugador.global_position = Vector3(sitio.x, 0.1, sitio.z)
+		mision.jugador.global_position = Vector3(sitio.x, piso_y(cam.global_position.y) + 0.1, sitio.z)
 		await frames(2)
 		var visto: bool = Vision.ve_jugador(espacio, cabeza.global_position, -cabeza.global_basis.z, mision.jugador, CamaraSeguridad.ALCANCE, CamaraSeguridad.MEDIO_ANGULO)
 		revisar("la cámara en %s vigila la sala" % cam.position, visto)
@@ -172,6 +178,11 @@ func _correr() -> void:
 	var con_pedestal: bool = Juego.lista.any(func(o: Dictionary) -> bool: return o["tipo"] != "pintura")
 	revisar("incluye una pieza de pedestal", con_pedestal)
 	var nav: RID = mision.mapa.get_navigation_map()
+	# El servidor de navegación registra el mapa nuevo en segundo plano: hay que esperarlo.
+	var espera_nav: int = 0
+	while NavigationServer3D.map_get_closest_point(nav, mision.mapa.spawn_polo).is_zero_approx() and espera_nav < 300:
+		await frames(1)
+		espera_nav += 1
 	var polys: int = mision.mapa.navigation_mesh.get_polygon_count()
 	revisar("navegación horneada", polys > 20, polys)
 	var lejos: Vector3 = mision.mapa.punto_lejano
@@ -179,7 +190,7 @@ func _correr() -> void:
 	revisar("hay ruta desde la entrada hasta el fondo", camino.size() > 2 and camino[-1].distance_to(lejos) < 1.0, camino.size())
 	for ruta: Array in mision.mapa.patrullas:
 		for p: Array in ruta:
-			var punto := Vector3(p[0], 0, p[1])
+			var punto := Vector3(p[0], mision.mapa.base_y(mision.mapa.piso_de(p, 2)), p[1])
 			var cerca: Vector3 = NavigationServer3D.map_get_closest_point(nav, punto)
 			if cerca.distance_to(punto) > 0.6:
 				revisar("punto de patrulla alcanzable", false, p)
@@ -223,18 +234,14 @@ func _correr() -> void:
 		for o: Obra in mision.obras:
 			if o.datos["id"] == info["id"]:
 				obra = o
-		var centro := Vector3(obra.global_position.x, 0.1, obra.global_position.z)
+		var centro := Vector3(obra.global_position.x, piso_y(obra.global_position.y) + 0.1, obra.global_position.z)
 		if info["tipo"] == "pintura":
 			var frente: Vector3 = obra.global_basis.z
 			j.global_position = centro + frente * 1.3
 			await frames(3)
 			mirar(j, obra.global_position + frente * 0.07)
 		else:
-			var hacia: Vector3 = -centro
-			hacia.y = 0.0
-			j.global_position = centro + hacia.normalized() * 1.3
-			await frames(3)
-			mirar(j, obra.global_position + Vector3.UP * 0.3)
+			await _acercarse(j, obra, 0.3, [1.3, 1.0])
 		await frames(3)
 		if Juego.robadas.is_empty():
 			await foto("02_cuadro")

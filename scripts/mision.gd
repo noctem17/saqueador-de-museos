@@ -8,6 +8,8 @@ const MAX_POLICIAS: int = 6
 const INTERVALO_POLICIA: float = 18.0
 ## En true vuelve al mapa de prueba (respaldo) en lugar del Museo Nacional.
 const USAR_MAPA_PRUEBA: bool = false
+## Máximo de cuadros colgados (las obras de la agenda más relleno de la colección).
+const MAX_CUADROS: int = 46
 
 var mapa: Mapa
 var jugador: Jugador
@@ -22,6 +24,8 @@ var _terminado: bool = false
 var _camioneta_visual: Node3D
 var _ambiente: AudioStreamPlayer
 var _alarma_sonido: AudioStreamPlayer
+var _zona_actual: String = ""
+var _reloj_zona: float = 0.0
 ## Se pone en true en las pruebas automáticas para saltarse la llamada inicial.
 static var saltar_intro: bool = false
 
@@ -64,6 +68,19 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if not Juego.control_bloqueado and not _terminado:
 		Juego.tiempo_mision += delta
+		_avisar_zona(delta)
+
+
+## Cuando el jugador cambia de sala, el nombre aparece un momento en pantalla.
+func _avisar_zona(delta: float) -> void:
+	_reloj_zona -= delta
+	if _reloj_zona > 0.0:
+		return
+	_reloj_zona = 0.4
+	var zona: String = mapa.zona_en(jugador.global_position)
+	if zona != "" and zona != _zona_actual:
+		_zona_actual = zona
+		hud.mostrar_aviso(zona)
 
 
 ## Lo que está en la agenda siempre aparece, pero en un sitio distinto cada partida.
@@ -85,24 +102,33 @@ func _repartir_obras() -> void:
 			indice_ped += 1
 			var o := Obra.new()
 			add_child(o)
-			o.position = Vector3(slot[0], 1.0, slot[1])
+			o.position = Vector3(slot[0], mapa.base_y(mapa.piso_de(slot, 2)) + 1.0, slot[1])
 			o.rotation.y = randf() * TAU
 			o.configurar(info)
 			obras.append(o)
-	while indice_pared < paredes.size() and not relleno.is_empty():
-		var extra: Dictionary = relleno.pop_back()
-		_colocar_cuadro(extra, paredes[indice_pared])
+			_anotar_ubicacion(info, o.position)
+	# Relleno de la colección: se repite si hace falta para que no queden salas vacías.
+	var i_relleno: int = 0
+	while indice_pared < mini(paredes.size(), MAX_CUADROS) and not relleno.is_empty():
+		_colocar_cuadro(relleno[i_relleno % relleno.size()], paredes[indice_pared])
+		i_relleno += 1
 		indice_pared += 1
+
+
+func _anotar_ubicacion(info: Dictionary, pos: Vector3) -> void:
+	if Juego.esta_en_lista(info["id"]):
+		Juego.ubicaciones[info["id"]] = mapa.zona_en(pos)
 
 
 func _colocar_cuadro(info: Dictionary, slot: Array) -> void:
 	mapa.panel_de_obra(slot)
 	var o := Obra.new()
 	add_child(o)
-	o.position = Vector3(slot[0], 1.85, slot[1])
+	o.position = Vector3(slot[0], mapa.base_y(mapa.piso_de(slot, 3)) + 1.85, slot[1])
 	o.rotation_degrees.y = slot[2]
 	o.configurar(info)
 	obras.append(o)
+	_anotar_ubicacion(info, o.position)
 
 
 func _repartir_coleccionables() -> void:
@@ -170,7 +196,7 @@ func _crear_guardias() -> void:
 	for ruta: Array in mapa.patrullas:
 		var g := Guardia.new()
 		for punto: Array in ruta:
-			g.ruta.append(Vector3(punto[0], 0.0, punto[1]))
+			g.ruta.append(Vector3(punto[0], mapa.base_y(mapa.piso_de(punto, 2)), punto[1]))
 		add_child(g)
 		g.global_position = g.ruta[0]
 
@@ -255,7 +281,7 @@ func _alarma_en_curso(motivo: String) -> void:
 	polo_escondido = Otros.PoloEscondido.new()
 	polo_escondido.rescatado.connect(_on_polo_rescatado)
 	add_child(polo_escondido)
-	polo_escondido.global_position = Vector3(pos_polo.x, 0.0, pos_polo.z)
+	polo_escondido.global_position = Vector3(pos_polo.x, pos_polo.y, pos_polo.z)
 	_crear_marcador(polo_escondido)
 
 	# Mostro llega caminando desde la camioneta con la pistola en la mano.
@@ -304,8 +330,8 @@ func _on_polo_rescatado() -> void:
 
 func _encender_luces_alarma() -> void:
 	for hijo: Node in get_tree().get_nodes_in_group("luces_sala"):
-		if hijo is OmniLight3D:
-			var luz := hijo as OmniLight3D
+		if hijo is Light3D:
+			var luz := hijo as Light3D
 			luz.light_color = Color("ff5a44")
 			var tween := create_tween().set_loops()
 			tween.tween_property(luz, "light_energy", 0.5, 0.6)

@@ -17,9 +17,12 @@ Los textos del juego están en `scripts/catalogo.gd`.
 
 ## Museo Nacional (mapa)
 
-- [Exposiciones permanentes del Museo Nacional de Colombia](https://www.museonacional.gov.co/exposiciones/permanentes/Paginas/default.aspx): nombres oficiales de las salas del primer piso. La sala 1 figura como cerrada temporalmente por montaje.
+- [Exposiciones permanentes del Museo Nacional de Colombia](https://www.museonacional.gov.co/exposiciones/permanentes/Paginas/default.aspx): nombres oficiales de las 17 salas en los tres pisos. La sala 1 figura como cerrada por montaje, y las salas 9 y 16, en renovación.
+- [Sala 14, La Rotonda](https://www.museonacional.gov.co/exposiciones/permanentes/Paginas/Tercer_piso/14.aspx): "Mirada panóptica al arte", con obras de gran formato vistas en 360 grados. Por eso en el juego ocupa el octágono del tercer piso.
+- [Sala 12](https://www.museonacional.gov.co/exposiciones/permanentes/Paginas/Segundo_piso/12.aspx): la página dice "Gabinete de Miniaturas" en el título y "Gabinete de Conexiones" en el texto. El juego usa "Gabinete de conexiones", que es el nombre del índice.
+- Planos isométricos de los tres pisos y renders de la fachada y los jardines (carpeta de referencias del equipo): forma de la cruz, celdas, centro octogonal, escalera principal, muralla, garitas, escalinata y rampas.
 - [Vestíbulo, Historia del Panóptico](https://www.museonacional.gov.co/exposiciones/permanentes/Paginas/Primer_piso/0.aspx): el edificio fue la Penitenciaría Central de Cundinamarca, construida en la década de 1870.
-- **Inventado para el juego:** la exposición temporal del Miguel Urrutia en préstamo, la ubicación de cada sala dentro de la cruz y las medidas, que son menores que las reales.
+- **Inventado para el juego:** la exposición temporal del Miguel Urrutia en préstamo, la ubicación exacta de cada sala dentro de la cruz y las medidas, que son aproximadas.
 
 ## Museo y colección
 

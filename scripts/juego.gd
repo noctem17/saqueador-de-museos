@@ -30,6 +30,7 @@ var control_bloqueado: bool = true
 var sospecha: float = 0.0           ## Máxima detección actual, de 0 a 1, para la interfaz.
 var resultado: String = ""          ## "completo", "parcial" o "fallo".
 var tiempo_mision: float = 0.0
+var ubicaciones: Dictionary[String, String] = {}   ## id de obra -> "Piso 2 · Sala 8 ..."
 
 
 func _ready() -> void:
@@ -76,6 +77,7 @@ func nueva_mision() -> void:
 	sospecha = 0.0
 	resultado = ""
 	tiempo_mision = 0.0
+	ubicaciones = {}
 
 
 func esta_en_lista(id: String) -> bool:

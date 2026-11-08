@@ -25,8 +25,9 @@ Juego 3D en Godot 4.7 para la clase de historia y cultura colombiana. Polo entra
 ## Dónde está cada cosa
 
 - `scripts/catalogo.gd`: textos de obras y coleccionables. Las fuentes están en [docs/FUENTES.md](docs/FUENTES.md).
-- `scripts/mapa_museo_nacional.gd`: primer piso del Museo Nacional, reducido, definido con listas de muros, puertas y posiciones.
-- `scripts/mapa.gd`: herramientas comunes de los mapas. `scripts/mapa_prueba.gd` es el mapa viejo, de respaldo.
+- `scripts/mapa_museo_nacional.gd`: el Museo Nacional con sus tres pisos, la cruz del Panóptico, la muralla con garitas, la fachada y los jardines de la entrada.
+- `scripts/mapa.gd`: herramientas comunes de los mapas. Junta las piezas en pocas mallas para que el juego vaya rápido. `scripts/mapa_prueba.gd` es el mapa viejo, de respaldo.
+- `shaders/bloques.gdshader`: dibuja la piedra, la madera y las baldosas sin usar imágenes.
 - `arte/`: imágenes de las obras, con el nombre del `id` de cada una (por ejemplo `violencia.jpg`).
 - `modelos/` y `audio/`: modelos 3D y sonidos. Las licencias están en [docs/CREDITOS.md](docs/CREDITOS.md).
 - `aportes/`: archivos que sube el equipo, antes de pasar al juego. Godot ignora esta carpeta.
