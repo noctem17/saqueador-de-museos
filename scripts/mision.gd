@@ -6,8 +6,10 @@ extends Node3D
 const Otros := preload("res://scripts/otros_interactuables.gd")
 const MAX_POLICIAS: int = 6
 const INTERVALO_POLICIA: float = 18.0
+## En true vuelve al mapa de prueba (respaldo) en lugar del Museo Nacional.
+const USAR_MAPA_PRUEBA: bool = false
 
-var mapa: MapaPrueba
+var mapa: Mapa
 var jugador: Jugador
 var hud: Hud
 var camioneta: Otros.Vehiculo
@@ -26,12 +28,12 @@ static var saltar_intro: bool = false
 
 func _ready() -> void:
 	Juego.nueva_mision()
-	mapa = MapaPrueba.new()
+	mapa = MapaPrueba.new() if USAR_MAPA_PRUEBA else MapaMuseoNacional.new()
 	add_child(mapa)
 	mapa.construir()
 
 	jugador = Jugador.new()
-	jugador.position = MapaPrueba.SPAWN_POLO
+	jugador.position = mapa.spawn_polo
 	add_child(jugador)
 	jugador.rotation.y = 0.0
 
@@ -66,8 +68,8 @@ func _process(delta: float) -> void:
 
 ## Lo que está en la agenda siempre aparece, pero en un sitio distinto cada partida.
 func _repartir_obras() -> void:
-	var paredes: Array = MapaPrueba.SLOTS_PARED.duplicate()
-	var pedestales: Array = MapaPrueba.SLOTS_PEDESTAL.duplicate()
+	var paredes: Array = mapa.slots_pared.duplicate()
+	var pedestales: Array = mapa.slots_pedestal.duplicate()
 	paredes.shuffle()
 	pedestales.shuffle()
 	var relleno: Array = Catalogo.RELLENO.duplicate()
@@ -94,6 +96,7 @@ func _repartir_obras() -> void:
 
 
 func _colocar_cuadro(info: Dictionary, slot: Array) -> void:
+	mapa.panel_de_obra(slot)
 	var o := Obra.new()
 	add_child(o)
 	o.position = Vector3(slot[0], 1.85, slot[1])
@@ -103,21 +106,21 @@ func _colocar_cuadro(info: Dictionary, slot: Array) -> void:
 
 
 func _repartir_coleccionables() -> void:
-	var sitios: Array = MapaPrueba.SLOTS_COLECCIONABLE.duplicate()
+	var sitios: Array = mapa.slots_coleccionable.duplicate()
 	sitios.shuffle()
 	var piezas: Array = Catalogo.COLECCIONABLES.duplicate()
 	piezas.shuffle()
 	for i: int in mini(Juego.COLECCIONABLES_POR_MISION, piezas.size()):
 		var c := Otros.Coleccionable.new()
 		add_child(c)
-		c.position = Vector3(sitios[i][0], 0.95, sitios[i][1])
+		c.position = Vector3(sitios[i][0], sitios[i][1], sitios[i][2])
 		c.configurar(piezas[i])
 
 
 func _crear_terminal() -> void:
 	var t := Otros.Terminal.new()
 	add_child(t)
-	t.position = MapaPrueba.POS_TERMINAL
+	t.position = mapa.pos_terminal
 	t.agregar_colision(Vector3(0.9, 0.5, 0.6))
 	var pantalla := MeshInstance3D.new()
 	var caja := BoxMesh.new()
@@ -135,13 +138,13 @@ func _crear_terminal() -> void:
 func _crear_camioneta() -> void:
 	camioneta = Otros.Vehiculo.new()
 	add_child(camioneta)
-	camioneta.position = MapaPrueba.POS_CAMIONETA
-	camioneta.rotation_degrees.y = -90.0   # El frente del modelo apunta a la salida.
+	camioneta.position = mapa.pos_camioneta
+	camioneta.rotation_degrees.y = mapa.giro_camioneta   # El frente del modelo apunta a la salida.
 	camioneta.agregar_colision(Vector3(2.5, 1.9, 4.6), Vector3(0, 0.95, 0))
 	var escena: PackedScene = load("res://modelos/camioneta.glb")
 	_camioneta_visual = escena.instantiate() as Node3D
 	camioneta.add_child(_camioneta_visual)
-	MapaPrueba.pintar_carro(_camioneta_visual, Color("14161b"))
+	Mapa.pintar_carro(_camioneta_visual, Color("14161b"))
 	# Cuerpo aparte para que nadie atraviese la camioneta.
 	var solido := StaticBody3D.new()
 	solido.collision_layer = Juego.CAPA_MUNDO
@@ -156,7 +159,7 @@ func _crear_camioneta() -> void:
 
 
 func _crear_camaras() -> void:
-	for dato: Array in MapaPrueba.CAMARAS:
+	for dato: Array in mapa.camaras:
 		var c := CamaraSeguridad.new()
 		c.position = Vector3(dato[0], dato[1], dato[2])
 		c.giro_base = dato[3]
@@ -164,7 +167,7 @@ func _crear_camaras() -> void:
 
 
 func _crear_guardias() -> void:
-	for ruta: Array in MapaPrueba.PATRULLAS:
+	for ruta: Array in mapa.patrullas:
 		var g := Guardia.new()
 		for punto: Array in ruta:
 			g.ruta.append(Vector3(punto[0], 0.0, punto[1]))
@@ -200,18 +203,18 @@ func _introduccion() -> void:
 	hud.fijar_objetivo("Llamada entrante: Mostro")
 	hud._refrescar_agenda()
 	jugador.mostrar_modelo(true)
-	var cine: Camera3D = _plano(MapaPrueba.SPAWN_POLO + Vector3(1.8, 1.4, -4.6), MapaPrueba.SPAWN_POLO + Vector3(0, 0.55, 0))
+	var cine: Camera3D = _plano(mapa.spawn_polo + Vector3(1.8, 1.4, -4.6), mapa.spawn_polo + Vector3(0, 0.55, 0))
 	await hud.fundir(0.0, 1.0)
 	var lineas: Array[Dictionary] = [
 		{"quien": "MOSTRO", "texto": "Polo. Saque la agenda y anote."},
 		{"quien": "POLO", "texto": "Diga, jefe."},
-		{"quien": "MOSTRO", "texto": "Esta noche entra al Miguel Urrutia. Hay unas piezas que no quiero que sigan ahí."},
+		{"quien": "MOSTRO", "texto": "Esta noche entra al Nacional. Se trajeron unas piezas del Miguel Urrutia en préstamo, y no quiero que vuelvan a ningún lado."},
 		{"quien": "POLO", "texto": "¿Para vender?"},
 		{"quien": "MOSTRO", "texto": "No. Nadie las compra, nadie las cuelga. Nadie las vuelve a ver. Lo que no se ve, no pasó."},
 	]
 	for o: Dictionary in Juego.lista:
 		lineas.append({"quien": "MOSTRO", "texto": "«%s», de %s. %s" % [o["titulo"], o["autor"], o["razon"]], "anota": true})
-	lineas.append({"quien": "MOSTRO", "texto": "Las cambian de sitio seguido, así que búsquelas sala por sala. Y no me haga ir: si yo entro, no entro a mirar cuadros."})
+	lineas.append({"quien": "MOSTRO", "texto": "Las tienen regadas por todo el Panóptico, así que búsquelas sala por sala. Y no me haga ir: si yo entro, no entro a mirar cuadros."})
 	await hud.reproducir_llamada(lineas)
 	jugador.mostrar_modelo(false)
 	cine.queue_free()
@@ -231,7 +234,7 @@ func _revisar_objetivo() -> void:
 	elif Juego.faltantes() > 0:
 		hud.fijar_objetivo("Sal en la camioneta. Piezas pendientes: %d" % Juego.faltantes())
 	else:
-		hud.fijar_objetivo("Vuelve a la camioneta en el parqueadero")
+		hud.fijar_objetivo("Vuelve a la camioneta en la calle")
 
 
 func _on_alarma(motivo: String) -> void:
@@ -256,7 +259,7 @@ func _alarma_en_curso(motivo: String) -> void:
 	_crear_marcador(polo_escondido)
 
 	# Mostro llega caminando desde la camioneta con la pistola en la mano.
-	var meta: Vector3 = MapaPrueba.SPAWN_MOSTRO
+	var meta: Vector3 = mapa.spawn_mostro
 	jugador.cambiar_a_mostro(meta + Vector3(4.5, 0.0, 2.5), meta)
 	jugador.mostrar_modelo(true, "Walk")
 	var cine: Camera3D = _plano(meta + Vector3(-2.2, 1.0, -2.0), meta + Vector3(2.0, 1.3, 1.2))
@@ -300,8 +303,8 @@ func _on_polo_rescatado() -> void:
 
 
 func _encender_luces_alarma() -> void:
-	for hijo: Node in mapa.get_children():
-		if hijo is OmniLight3D and (hijo as OmniLight3D).shadow_enabled:
+	for hijo: Node in get_tree().get_nodes_in_group("luces_sala"):
+		if hijo is OmniLight3D:
 			var luz := hijo as OmniLight3D
 			luz.light_color = Color("ff5a44")
 			var tween := create_tween().set_loops()
@@ -315,7 +318,7 @@ func _llegada_policia() -> void:
 	var g := Guardia.new()
 	g.es_policia = true
 	add_child(g)
-	g.global_position = MapaPrueba.SPAWN_POLICIA.pick_random()
+	g.global_position = mapa.spawn_policia.pick_random()
 	hud.mostrar_aviso("Llegó la policía")
 
 
@@ -331,14 +334,14 @@ func _huir() -> void:
 	Juego.control_bloqueado = true
 	if polo_seguidor:
 		polo_seguidor.visible = false
-	_plano(Vector3(-20.0, 1.6, 26.0), camioneta.global_position + Vector3(0, 0.8, 0))
+	_plano(mapa.plano_huida, camioneta.global_position + Vector3(0, 0.8, 0))
 	if _alarma_sonido:
 		_alarma_sonido.volume_db = -22.0
 	Sfx.plano(self, "motor", -4.0)
-	var pluma: Node3D = mapa.get_node("Pluma")
 	var tween := create_tween()
-	tween.tween_property(pluma, "rotation:x", -1.45, 0.8)
-	tween.parallel().tween_property(camioneta, "position", MapaPrueba.FIN_HUIDA, 3.0).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	if mapa.has_node("Pluma"):
+		tween.tween_property(mapa.get_node("Pluma"), "rotation:x", -1.45, 0.8)
+	tween.parallel().tween_property(camioneta, "position", mapa.fin_huida, 3.0).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	await tween.finished
 	_terminar("completo" if Juego.faltantes() == 0 else "parcial")
 

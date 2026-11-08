@@ -1,6 +1,6 @@
 # El Encargo
 
-Juego 3D en Godot 4.7 para la clase de historia y cultura colombiana. Polo entra de noche al Museo de Arte Miguel Urrutia para desaparecer las obras que su jefe, Mostro, no quiere que nadie vuelva a ver. La idea central: robar una obra también es una forma de censura.
+Juego 3D en Godot 4.7 para la clase de historia y cultura colombiana. Polo entra de noche al Museo Nacional de Colombia, el antiguo Panóptico, donde están en préstamo unas obras del Museo de Arte Miguel Urrutia. Su jefe, Mostro, quiere que nadie las vuelva a ver. La idea central: robar una obra también es una forma de censura.
 
 ## Cómo abrirlo
 
@@ -25,13 +25,14 @@ Juego 3D en Godot 4.7 para la clase de historia y cultura colombiana. Polo entra
 ## Dónde está cada cosa
 
 - `scripts/catalogo.gd`: textos de obras y coleccionables. Las fuentes están en [docs/FUENTES.md](docs/FUENTES.md).
-- `scripts/mapa_prueba.gd`: mapa provisional, definido con listas de muros, puertas y posiciones.
+- `scripts/mapa_museo_nacional.gd`: primer piso del Museo Nacional, reducido, definido con listas de muros, puertas y posiciones.
+- `scripts/mapa.gd`: herramientas comunes de los mapas. `scripts/mapa_prueba.gd` es el mapa viejo, de respaldo.
 - `arte/`: imágenes de las obras, con el nombre del `id` de cada una (por ejemplo `violencia.jpg`).
 - `modelos/` y `audio/`: modelos 3D y sonidos. Las licencias están en [docs/CREDITOS.md](docs/CREDITOS.md).
 - `aportes/`: archivos que sube el equipo, antes de pasar al juego. Godot ignora esta carpeta.
 - `docs/GUIA_EQUIPO.md`: qué puede aportar cada integrante.
 - `docs/GUIA_MODELOS.md`: cómo modificar un modelo con Blender.
-- `tests/`: prueba automática que juega la misión completa.
+- `tests/`: prueba automática que juega la misión completa, y `vistas_museo.tscn`, que saca fotos del mapa en `capturas/`.
 
 Para correr la prueba automática:
 

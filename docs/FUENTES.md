@@ -15,6 +15,12 @@ Los textos del juego están en `scripts/catalogo.gd`.
 - **Retratos mudos y Monjas muertas:** se confirmó que están en la colección, pero hay poca información sobre cada obra.
 - **Exhibición:** lo expuesto en el museo cambia. Hay que confirmar en la visita qué obras están en sala.
 
+## Museo Nacional (mapa)
+
+- [Exposiciones permanentes del Museo Nacional de Colombia](https://www.museonacional.gov.co/exposiciones/permanentes/Paginas/default.aspx): nombres oficiales de las salas del primer piso. La sala 1 figura como cerrada temporalmente por montaje.
+- [Vestíbulo, Historia del Panóptico](https://www.museonacional.gov.co/exposiciones/permanentes/Paginas/Primer_piso/0.aspx): el edificio fue la Penitenciaría Central de Cundinamarca, construida en la década de 1870.
+- **Inventado para el juego:** la exposición temporal del Miguel Urrutia en préstamo, la ubicación de cada sala dentro de la cruz y las medidas, que son menores que las reales.
+
 ## Museo y colección
 
 - [Museo de Arte Miguel Urrutia, Banrepcultural](https://www.banrepcultural.org/bogota/museo-de-arte)

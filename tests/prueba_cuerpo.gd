@@ -174,9 +174,10 @@ func _correr() -> void:
 	var nav: RID = mision.mapa.get_navigation_map()
 	var polys: int = mision.mapa.navigation_mesh.get_polygon_count()
 	revisar("navegación horneada", polys > 20, polys)
-	var camino: PackedVector3Array = NavigationServer3D.map_get_path(nav, Vector3(20, 0, 9), Vector3(-19, 0, -21), true)
-	revisar("hay ruta entre salas", camino.size() > 2 and camino[-1].distance_to(Vector3(-19, 0, -21)) < 1.0, camino.size())
-	for ruta: Array in MapaPrueba.PATRULLAS:
+	var lejos: Vector3 = mision.mapa.punto_lejano
+	var camino: PackedVector3Array = NavigationServer3D.map_get_path(nav, mision.mapa.spawn_polo, lejos, true)
+	revisar("hay ruta desde la entrada hasta el fondo", camino.size() > 2 and camino[-1].distance_to(lejos) < 1.0, camino.size())
+	for ruta: Array in mision.mapa.patrullas:
 		for p: Array in ruta:
 			var punto := Vector3(p[0], 0, p[1])
 			var cerca: Vector3 = NavigationServer3D.map_get_closest_point(nav, punto)
@@ -198,7 +199,7 @@ func _correr() -> void:
 	await frames(60)
 	Input.action_release("adelante")
 	revisar("W mueve al jugador", p0.distance_to(j.global_position) > 2.0, p0.distance_to(j.global_position))
-	await foto("01_parqueadero")
+	await foto("01_entrada")
 
 	var alto: float = j.punto_cabeza().y
 	Input.action_press("agacharse")
@@ -251,9 +252,11 @@ func _correr() -> void:
 	var coleccionable: Node3D = null
 	for h: Node in mision.get_children():
 		if h is Mision.Otros.Coleccionable:
-			coleccionable = h
-			break
-	for slot: Array in MapaPrueba.SLOTS_COLECCIONABLE:
+			if coleccionable == null:
+				coleccionable = h
+			else:
+				h.free()   # Si otra moneda ocupa el mismo escondite, el rayo la vería a ella.
+	for slot: Array in mision.mapa.slots_coleccionable:
 		var sitio := Vector3(slot[0], slot[1], slot[2])
 		coleccionable.global_position = sitio
 		await frames(2)
@@ -276,9 +279,9 @@ func _correr() -> void:
 	revisar("cerrar reanuda", not get_tree().paused)
 
 	# Camioneta: gana.
-	j.global_position = MapaPrueba.POS_CAMIONETA + Vector3(0, 0.1, 2.1)
+	j.global_position = mision.mapa.pos_camioneta + Vector3(0, 0.1, 2.1)
 	await frames(3)
-	mirar(j, MapaPrueba.POS_CAMIONETA + Vector3.UP * 1.0)
+	mirar(j, mision.mapa.pos_camioneta + Vector3.UP * 1.0)
 	await frames(3)
 	revisar("mira camioneta", j.objetivo_uso == mision.camioneta, j.texto_uso)
 	await foto("05_camioneta")
@@ -302,7 +305,7 @@ func _correr() -> void:
 	# Alarma: entra Mostro, dispara, rescata y huye.
 	await nueva()
 	j = mision.jugador
-	var pos_polo := Vector3(-3, 0.1, 2)
+	var pos_polo: Vector3 = mision.mapa.punto_prueba
 	j.global_position = pos_polo
 	await frames(5)
 	var g1: Guardia = get_tree().get_nodes_in_group("guardias")[0]
