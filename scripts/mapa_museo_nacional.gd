@@ -112,7 +112,9 @@ func construir() -> void:
 	capas = 1
 	_luces()
 	_letreros()
-	ambiente(Color("060912"), Color("4a5266"), 0.2)
+	DecoracionMuseo.new(self).decorar()
+	# Luz ambiente cálida: se ve el museo entero, y los focos marcan dónde hay luz y dónde penumbra.
+	ambiente(Color("060912"), Color("8c877d"), 0.42)
 	hornear_navegacion(0.25)
 
 
@@ -214,6 +216,8 @@ func _terreno() -> void:
 		suelo(mn + 0.3, 38.6, mx - 0.3, 45.7, pasto, 0.15)
 		# Muro de contención entre los prados y la rampa.
 		caja_mat(Vector3(52.0, 2.05, 0.3), Vector3(38.0 * lado, -0.775, 46.15), piedra_oscura, true)
+		# Baranda sobre ese muro: del prado a la rampa hay casi dos metros de caída.
+		baranda(Vector3(14.0 * lado, 0.25, 46.15), Vector3(64.0 * lado, 0.25, 46.15), hierro, 0.9, 0.2, true)
 		# Plataforma que une la plaza con la rampa.
 		caja_mat(Vector3(4.0, 1.8, 2.0), Vector3(10.0 * lado, -0.9, 47.0), adoquin, true)
 		caja_mat(Vector3(0.3, 2.05, 4.0), Vector3(8.15 * lado, -0.775, 48.0), piedra_oscura, true)
@@ -241,14 +245,17 @@ func _terreno() -> void:
 			_arbol(x * lado, 53.2, Y_CALLE)
 	# Escalinata central, de la plaza a la acera.
 	escalera(Vector3(0, 0, 46.0), Vector3(0, Y_CALLE, 50.0), 16.0, piedra_oscura)
+	# Pasamanos: a los lados y dos en el medio, como en las escalinatas de verdad.
+	for xp: float in [-7.85, -2.6, 2.6, 7.85]:
+		baranda(Vector3(xp, 0.0, 46.0), Vector3(xp, Y_CALLE, 50.0), hierro, 0.9, 0.45, absf(xp) > 5.0)
 	# Estatua sobre pedestal en el prado oriental.
 	caja(Vector3(1.4, 1.8, 1.4), Vector3(36.0, 1.05, 42.0), Color("8d877c"))
 	cilindro(0.32, 1.3, Vector3(36.0, 1.95, 42.0), Color("3b3a36"), 8, false)
 	esfera(0.26, Vector3(36.0, 3.45, 42.0), material(Color("3b3a36")))
 	for p: Vector2 in [Vector2(-10, 38.6), Vector2(10, 38.6), Vector2(-10, 45.2), Vector2(10, 45.2), Vector2(-30, 45.6), Vector2(30, 45.6)]:
 		_farol(p.x, p.y)
-	banca(20.0, 39.5, 0.0, 0.15)
-	banca(-24.0, 39.5, 0.0, 0.15)
+	banca(20.0, 39.5, 0.0, 0.15, true)
+	banca(-24.0, 39.5, 0.0, 0.15, true)
 
 	# Acera y Carrera Séptima.
 	suelo(-180, 50.0, 72, 55.0, material(Color("75716b"), 0.9), Y_CALLE)
@@ -426,7 +433,7 @@ func _brazo(b: Dictionary) -> void:
 		while s < LARGO_BRAZO:
 			var energia: float = 3.0 if (id == "e" and f == 0) else 4.6
 			var color: Color = Color("ffc77a") if (id == "e" and f == 0) else Color("ffe6c4")
-			foco(_w(b, s, 0, y0 + H - 0.35), energia, H + 0.2, 64.0, color)
+			foco(_w(b, s, 0, y0 + H - 0.35), energia, H + 1.3, 66.0, color)
 			s += 7.0
 		# Letreros de las salas, mirando hacia el centro.
 		var nombres: Array = SALAS[id][f]
@@ -551,6 +558,9 @@ func _escalera_principal() -> void:
 		for xb: float in [2.05, 5.95]:
 			baranda(Vector3(xb, mitad, 15.5), Vector3(xb, y0 + H, 20), hierro)
 		baranda(Vector3(-6, mitad, 12.55), Vector3(6, mitad, 12.55), hierro)
+		# Lados del descanso: sin esto se podía caer al vacío por el borde.
+		baranda(Vector3(-6, mitad, 12.55), Vector3(-6, mitad, 15.5), hierro)
+		baranda(Vector3(6, mitad, 12.55), Vector3(6, mitad, 15.5), hierro)
 		foco(Vector3(0, y0 + H - 0.35, 14.0), 3.6)
 		if f == 0:
 			caja_mat(Vector3(12.0, mitad - GROSOR, 3.0), Vector3(0, (mitad - GROSOR) * 0.5, 14.0), estuco, true)
@@ -649,8 +659,8 @@ func _patios() -> void:
 		_arbol(a.x, a.y)
 	for xa: float in [-58.0, -40.0]:
 		baranda(Vector3(xa, 0, 7.5), Vector3(xa + 10.0, 0, 7.5), hierro, 0.5, 0.25, false)
-	banca(-28.0, 10.0, 0.0)
-	banca(-52.0, 14.2, 0.0)
+	banca(-28.0, 10.0, 0.0, 0.0, true)
+	banca(-52.0, 14.2, 0.0, 0.0, true)
 	# Arcada: columnas y arcos delante del muro del bloque de entrada.
 	var xc: float = -29.0
 	while xc <= -10.0:
@@ -667,15 +677,15 @@ func _patios() -> void:
 	suelo(9, 12.5, 64, 15.0, ladrillo, 0.02)
 	for a: Vector2 in [Vector2(20, 9), Vector2(34, 19), Vector2(48, 9.5), Vector2(58, 18)]:
 		_arbol(a.x, a.y)
-	banca(30.0, 10.0, 0.0)
-	banca(44.0, 18.5, 0.0)
+	banca(30.0, 10.0, 0.0, 0.0, true)
+	banca(44.0, 18.5, 0.0, 0.0, true)
 	zonas.append([9.0, 6.5, 64.0, 22.0, 0, "Patio oriental"])
 
 	# Patios de atrás, a los lados del brazo norte.
 	for lado: float in [-1.0, 1.0]:
 		for a: Vector2 in [Vector2(20, -20), Vector2(38, -30), Vector2(26, -48), Vector2(50, -52), Vector2(54, -18)]:
 			_arbol(a.x * lado, a.y)
-		banca(16.0 * lado, -24.0, 90.0)
+		banca(16.0 * lado, -24.0, 90.0, 0.0, true)
 	zonas.append([-64.0, -64.0, -6.5, -6.5, 0, "Patio noroeste"])
 	zonas.append([6.5, -64.0, 64.0, -6.5, 0, "Patio noreste"])
 	zonas.append([-72.0, 37.2, 72.0, 50.0, 0, "Jardines de la entrada"])
@@ -792,6 +802,16 @@ func _datos() -> void:
 		slots_pared.append([xp, 28.16, 0.0, 2])
 	for xf: float in [-24.0, -12.0, 12.0, 24.0]:
 		slots_pared.append([xf, 35.99, 180.0, 2])
+
+	# Reja con candado en la puerta de la Sala 1 y sus tres llaves, siempre en el mismo sitio.
+	pos_candado = Vector3(-12.0, 0.0, 29.0)
+	sitios_llaves = {
+		"corazon": [Vector3(-34.0, 0.53, 14.0), "agua"],       # En el agua de la fuente del patio.
+		"estrella": [Vector3(25.2, 0.55, 23.22), "cajon"],     # Cajón del escritorio de vigilancia.
+		"tigre": [Vector3(-37.15, 2 * H + 0.35, -6.17), "ladrillo"],   # Celda del piso 3, ala oeste (sala 15).
+	}
+	# El cuadro del MAMBO: muro del fondo de la Sala 1, la cerrada por montaje.
+	slot_especial = [-29.69, 31.5, 90.0, 0]   # El muro de afuera mide 0.6 m: su cara está en -29.7.
 
 	# Esculturas.
 	for p: Array in [[4.5, -22.25, 0], [-4.5, -36.25, 0], [4.5, -50.25, 0],

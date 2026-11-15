@@ -28,13 +28,19 @@ var _llamada_quien: Label
 var _llamada_texto: Label
 var _llamada_ayuda: Label
 var _fundido: ColorRect
+var _franjas: Array[ColorRect] = []   ## Barras negras de cine, arriba y abajo.
+var _papel_agenda: PanelContainer
 var _pantalla: PanelContainer
 var _agenda_grande: RichTextLabel
 var _lista_bolso: ItemList
 var _lectura: RichTextLabel
+var _foto: TextureRect
 var _pausa: PanelContainer
 var _tween_aviso: Tween
 var _esperando_llamada: bool = false
+
+
+var _en_cine: bool = false   ## Con las franjas de cine puestas.
 
 
 func _ready() -> void:
@@ -60,12 +66,13 @@ func _armar() -> void:
 	_estado = _etiqueta(raiz, 16)
 	_estado.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	_estado.offset_left = 24
-	_estado.offset_right = 444
+	_estado.offset_right = 680
 	_estado.offset_top = -46
 	_estado.offset_bottom = -18
 
 	# Agenda pequeña siempre a la vista: aquí se ve tachar cada obra.
 	var papel := PanelContainer.new()
+	_papel_agenda = papel
 	papel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	papel.offset_left = -310
 	papel.offset_top = 16
@@ -167,6 +174,15 @@ func _armar() -> void:
 	_armar_pantalla(raiz)
 	_armar_pausa(raiz)
 
+	for arriba: bool in [true, false]:
+		var franja := ColorRect.new()
+		franja.color = Color.BLACK
+		franja.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		franja.set_anchors_preset(Control.PRESET_TOP_WIDE if arriba else Control.PRESET_BOTTOM_WIDE)
+		franja.offset_top = 0.0
+		franja.offset_bottom = 0.0
+		raiz.add_child(franja)
+		_franjas.append(franja)
 	_fundido = ColorRect.new()
 	_fundido.color = Color.BLACK
 	_fundido.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -241,6 +257,12 @@ func _armar_pantalla(raiz: Control) -> void:
 	_lista_bolso.add_theme_color_override("font_color", Color.WHITE)
 	_lista_bolso.item_selected.connect(_leer_item)
 	der.add_child(_lista_bolso)
+	_foto = TextureRect.new()
+	_foto.custom_minimum_size.y = 200
+	_foto.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_foto.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_foto.visible = false
+	der.add_child(_foto)
 	_lectura = RichTextLabel.new()
 	_lectura.bbcode_enabled = true
 	_lectura.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -346,13 +368,16 @@ func _process(_delta: float) -> void:
 		_estado.text = "MOSTRO  |  Balas %s" % municion
 		_vida.visible = true
 		_vida_txt.visible = true
-	elif jugador.agachado:
-		_estado.text = "POLO  |  agachado"
-	elif jugador.corriendo:
-		_estado.text = "POLO  |  corriendo: ¡te oyen!"
 	else:
-		_estado.text = "POLO"
-	_alarma.visible = Juego.alarma and fmod(Time.get_ticks_msec() / 500.0, 2.0) < 1.4
+		var partes: Array[String] = ["POLO"]
+		if jugador.agachado:
+			partes.append("agachado")
+		elif jugador.corriendo:
+			partes.append("corriendo: ¡te oyen!")
+		if jugador.en_sombra and jugador.dentro:
+			partes.append("en la penumbra: cuesta verte")
+		_estado.text = "  |  ".join(partes)
+	_alarma.visible = Juego.alarma and not _en_cine and fmod(Time.get_ticks_msec() / 500.0, 2.0) < 1.4
 
 
 ## Conecta las señales del jugador. La misión lo llama una vez lo asigna.
@@ -399,6 +424,63 @@ func mostrar_aviso(texto: String) -> void:
 	_tween_aviso.tween_property(_aviso, "modulate:a", 0.0, 0.5)
 
 
+## "Llaves: ♥ ✓  ★ —  TIGRE —": cuáles del candado tiene Polo.
+func _linea_llaves() -> String:
+	var partes: Array[String] = []
+	for id: String in Llaves.DATOS:
+		var tiene: bool = id in Juego.llaves
+		var color: String = (Llaves.DATOS[id]["color"] as Color).to_html(false) if tiene else "8a8170"
+		partes.append("[color=#%s]%s %s[/color]" % [color, Llaves.DATOS[id]["simbolo"], "✓" if tiene else "—"])
+	return "   Llaves: " + "  ".join(partes)
+
+
+## Barras negras de cine: entran o salen en medio segundo.
+## con_agenda = false: al quitar las franjas no vuelven la agenda ni el objetivo
+## (en la pelea final no hacen falta).
+func franjas(mostrar: bool, con_agenda: bool = true) -> void:
+	var alto: float = 90.0 if mostrar else 0.0
+	# En la escena no se ven la agenda ni el objetivo: solo la imagen y el diálogo.
+	_papel_agenda.visible = not mostrar and con_agenda
+	_objetivo.visible = not mostrar and con_agenda
+	_punto.visible = not mostrar
+	_en_cine = mostrar
+	_alarma.visible = _alarma.visible and not mostrar
+	var t := create_tween().set_parallel()
+	t.tween_property(_franjas[0], "offset_bottom", alto, 0.5)
+	t.tween_property(_franjas[1], "offset_top", -alto, 0.5)
+	# El cuadro de diálogo sube para quedar encima de la franja de abajo, no debajo.
+	var sube: float = alto - 18.0 if mostrar else 0.0
+	t.tween_property(_llamada, "offset_top", -190.0 - sube, 0.5)
+	t.tween_property(_llamada, "offset_bottom", -30.0 - sube, 0.5)
+	await t.finished
+
+
+## Texto enorme en el centro de la pantalla, que entra de golpe (para los gritos).
+func grito(texto: String, dura: float = 2.5) -> void:
+	var l := Label.new()
+	l.text = texto
+	l.add_theme_font_size_override("font_size", 58)
+	l.add_theme_color_override("font_color", Color("ffd34a"))
+	l.add_theme_color_override("font_outline_color", Color("2a0a00"))
+	l.add_theme_constant_override("outline_size", 14)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.set_anchors_preset(Control.PRESET_FULL_RECT)
+	l.offset_left = 80
+	l.offset_right = -80
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(l)
+	l.pivot_offset = get_viewport().get_visible_rect().size * 0.5
+	l.scale = Vector2(1.8, 1.8)
+	var t := create_tween()
+	t.tween_property(l, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	t.tween_interval(dura)
+	t.tween_property(l, "modulate:a", 0.0, 0.4)
+	t.tween_callback(l.queue_free)
+	await t.finished
+
+
 func fundir(destino: float, tiempo: float) -> void:
 	var tween := create_tween()
 	tween.tween_property(_fundido, "color:a", destino, tiempo)
@@ -407,10 +489,12 @@ func fundir(destino: float, tiempo: float) -> void:
 
 ## Reproduce una llamada línea por línea. Cada línea: {quien, texto, anota (opcional)}.
 ## Si la línea trae "anota", al avanzar queda escrita en la agenda.
-func reproducir_llamada(lineas: Array[Dictionary], automatica: bool = false) -> void:
+## Con telefono = false es una conversación cara a cara (sin timbre).
+func reproducir_llamada(lineas: Array[Dictionary], automatica: bool = false, telefono: bool = true) -> void:
 	_llamada.visible = true
 	_llamada_ayuda.visible = not automatica
-	Sfx.plano(self, "telefono", -14.0)
+	if telefono:
+		Sfx.plano(self, "telefono", -14.0)
 	for linea: Dictionary in lineas:
 		_llamada_quien.text = linea["quien"]
 		_llamada_texto.text = linea["texto"]
@@ -426,22 +510,36 @@ func reproducir_llamada(lineas: Array[Dictionary], automatica: bool = false) -> 
 	_llamada.visible = false
 
 
+## La agenda va dividida por museo: cada sección aparece cuando Polo anota su
+## primera pieza (la lista ya viene ordenada por museo desde Juego).
 func _refrescar_agenda() -> void:
 	var cuerpo: String = "[b]Agenda de Polo[/b]\n"
 	if Juego.anotadas == 0:
 		cuerpo += "..."
+	var seccion: String = ""
 	for i: int in mini(Juego.anotadas, Juego.lista.size()):
 		var o: Dictionary = Juego.lista[i]
+		if o["museo"] != seccion:
+			seccion = o["museo"]
+			cuerpo += "[color=#7a5a2a][font_size=13]%s[/font_size][/color]\n" % (Catalogo.museo(seccion)["nombre"] as String).to_upper()
 		var titulo: String = o["titulo"]
+		if o.get("fija", false) and seccion == "especial":
+			titulo = "★ " + titulo
 		var donde: String = Juego.ubicaciones.get(o["id"], "")
 		if donde != "":
 			titulo += " [color=#8a8170][font_size=13]· %s[/font_size][/color]" % donde.get_slice(" · ", 0)
 		cuerpo += "[s]%s[/s]\n" % titulo if o["id"] in Juego.robadas else "%s\n" % titulo
+		if o["museo"] == "especial" and Juego.cine_cuadro_visto and not o["id"] in Juego.robadas:
+			cuerpo += "[font_size=14]%s[/font_size]\n" % _linea_llaves()
 	_agenda_mini.text = cuerpo.strip_edges()
 
 	var detalle: String = ""
+	seccion = ""
 	for i: int in mini(Juego.anotadas, Juego.lista.size()):
 		var o: Dictionary = Juego.lista[i]
+		if o["museo"] != seccion:
+			seccion = o["museo"]
+			detalle += "[font_size=15][color=#7a5a2a]— %s —[/color][/font_size]\n" % (Catalogo.museo(seccion)["nombre"] as String).to_upper()
 		var donde: String = Juego.ubicaciones.get(o["id"], "")
 		var linea: String = "[b]%s[/b]\n%s\n[i]«%s»[/i]" % [o["titulo"], Juego.credito(o), o["razon"]]
 		if donde != "":
@@ -455,15 +553,21 @@ func _refrescar_bolso() -> void:
 	for item: Dictionary in Juego.bolso:
 		var prefijo: String = "Obra: " if item["clase"] == "obra" else ""
 		_lista_bolso.add_item("%s%s" % [prefijo, item["nombre"]])
+	_foto.visible = false
 	if Juego.bolso.is_empty():
 		_lectura.text = "El bolso está vacío."
 	else:
 		_lectura.text = "Elige algo de la lista para leer su historia."
 
 
+## Muestra la ficha y, si la pieza tiene foto real en res://arte/, la foto.
 func _leer_item(indice: int) -> void:
 	var item: Dictionary = Juego.bolso[indice]
 	_lectura.text = "[b]%s[/b]\n%s\n\n%s" % [item["nombre"], item["detalle"], item["texto"]]
+	var ruta: String = item.get("imagen", "")
+	_foto.visible = ruta != ""
+	if ruta != "":
+		_foto.texture = load(ruta)
 
 
 func _etiqueta(padre: Control, tam: int) -> Label:

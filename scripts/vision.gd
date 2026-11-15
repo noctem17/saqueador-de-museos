@@ -20,9 +20,40 @@ static func ve_jugador(espacio: PhysicsDirectSpaceState3D, ojo: Vector3, adelant
 	return false
 
 
-## Agachado se es más difícil de ver, y de lejos se tarda más en reconocer a alguien.
+## Agachado se es más difícil de ver, en la penumbra también, y de lejos se tarda
+## más en reconocer a alguien. Agachado y en penumbra, un guardia te ve a ~4,5 m.
 static func alcance_real(alcance: float, jugador: Jugador) -> float:
-	return alcance * (0.62 if jugador.agachado else 1.0)
+	var factor: float = 0.62 if jugador.agachado else 1.0
+	if jugador.en_sombra:
+		factor *= 0.55
+	return alcance * factor
+
+
+## Cuánta luz de las lámparas le llega a un punto (0 = penumbra). Solo cuenta las
+## que están en el mismo piso y encima del punto: un foco del piso de arriba no
+## atraviesa la losa.
+static func luz_en(punto: Vector3, luces: Array[Light3D], alto_piso: float) -> float:
+	var total: float = 0.0
+	for l: Light3D in luces:
+		if not is_instance_valid(l) or not l.visible:
+			continue
+		var d: Vector3 = punto - l.global_position
+		if d.y > 0.5 or d.y < -alto_piso:
+			continue
+		var distancia: float = d.length()
+		if l is SpotLight3D:
+			var foco := l as SpotLight3D
+			if distancia > foco.spot_range:
+				continue
+			var eje: Vector3 = -foco.global_basis.z
+			if rad_to_deg(eje.angle_to(d)) > foco.spot_angle * 0.8:
+				continue
+			total += 1.0 - distancia / foco.spot_range
+		elif l is OmniLight3D:
+			var bombillo := l as OmniLight3D
+			if distancia < bombillo.omni_range:
+				total += 1.0 - distancia / bombillo.omni_range
+	return total
 
 
 static func ritmo(distancia: float, alcance: float) -> float:

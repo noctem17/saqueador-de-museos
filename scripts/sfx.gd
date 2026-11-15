@@ -11,6 +11,18 @@ static var _cache: Dictionary[String, AudioStream] = {}
 static func _flujo(nombre: String) -> AudioStream:
 	if not _cache.has(nombre):
 		_cache[nombre] = null
+		# Si hay variantes numeradas (paso_1, paso_2...), cada vez suena una al azar
+		# y con el tono un poco distinto, para que no se oiga repetido.
+		var variantes := AudioStreamRandomizer.new()
+		variantes.random_pitch = 1.06
+		for i: int in range(1, 10):
+			for ext: String in FORMATOS:
+				var ruta_v: String = "res://audio/%s_%d.%s" % [nombre, i, ext]
+				if ResourceLoader.exists(ruta_v):
+					variantes.add_stream(-1, load(ruta_v) as AudioStream)
+		if variantes.streams_count > 0:
+			_cache[nombre] = variantes
+			return variantes
 		for ext: String in FORMATOS:
 			var ruta: String = "res://audio/%s.%s" % [nombre, ext]
 			if ResourceLoader.exists(ruta):

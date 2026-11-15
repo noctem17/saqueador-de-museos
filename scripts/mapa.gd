@@ -19,6 +19,9 @@ const ZONA: float = 16.0
 var alto_piso: float = 4.5           # Para mapas de varios pisos.
 var slots_pared: Array = []          # Cuadros: [x, z, giro, piso]. El giro apunta hacia la sala.
 var slots_pedestal: Array = []       # Esculturas: [x, z, piso]
+var slot_especial: Array = []        # Sitio fijo del cuadro del MAMBO: [x, z, giro, piso]
+var pos_candado: Vector3 = Vector3.INF   # Reja con candado de la sala del cuadro (INF = no hay).
+var sitios_llaves: Dictionary = {}       # id de llave -> [posición, escondite]
 var slots_coleccionable: Array = []  # Monedas y billetes: [x, y, z] (y absoluta)
 var camaras: Array = []              # [x, y, z, giro base]
 var patrullas: Array = []            # Rutas de guardias: listas de [x, z, piso]
@@ -322,7 +325,9 @@ func _tramo(horizontal: bool, fijo: float, a: float, b: float, alto: float, mat:
 		var pos := Vector3(medio, y0 + alto * 0.5, fijo) if horizontal else Vector3(fijo, y0 + alto * 0.5, medio)
 		caja_mat(tam, pos, mat, true)
 		if zocalo:
-			var tam_z: Vector3 = tam + (Vector3(0, 0, 0.04) if horizontal else Vector3(0.04, 0, 0))
+			# Un centímetro más corto en cada punta: si su extremo coincide con el canto
+			# del muro (en las puertas), la tarjeta no sabe cuál dibujar y parpadea.
+			var tam_z: Vector3 = tam + (Vector3(-0.02, 0, 0.04) if horizontal else Vector3(0.04, 0, -0.02))
 			tam_z.y = 0.18
 			caja_mat(tam_z, Vector3(pos.x, y0 + 0.09, pos.z), material(Color("3c3833")), false)
 
@@ -488,7 +493,7 @@ func luz(pos: Vector3, energia: float, rango: float, sombras: bool, color: Color
 
 ## Foco de techo que alumbra hacia abajo. Al no apuntar hacia arriba no se cuela
 ## al piso de encima, y sin sombras cuesta muy poco.
-func foco(pos: Vector3, energia: float = 3.0, rango: float = 4.7, angulo: float = 62.0, color: Color = Color("ffe6c4"), de_sala: bool = true) -> SpotLight3D:
+func foco(pos: Vector3, energia: float = 3.0, rango: float = 5.8, angulo: float = 62.0, color: Color = Color("ffe6c4"), de_sala: bool = true) -> SpotLight3D:
 	var l := SpotLight3D.new()
 	l.position = pos
 	l.rotation_degrees.x = -90.0
@@ -525,15 +530,32 @@ func panel_de_obra(slot: Array, ancho: float = 2.4, alto: float = 2.4) -> void:
 	caja_mat(Vector3(ancho, alto, 0.04), pos, material(Color("ece7dd")), false, giro)
 
 
-func banca(x: float, z: float, giro: float, y: float = 0.0) -> void:
-	var escena: PackedScene = load("res://modelos/banca.glb")
-	var b := escena.instantiate() as Node3D
-	b.scale = Vector3(2.4, 1.42, 2.2)
-	b.position = Vector3(x, y, z)
-	b.rotation_degrees.y = giro
-	add_child(b)
-	var largo := Vector3(1.6, 0.45, 0.55) if is_zero_approx(fmod(giro, 180.0)) else Vector3(0.55, 0.45, 1.6)
-	caja_mat(largo, Vector3(x, y + 0.225, z), null, true)
+## Banca a tamaño real (1.8 m de largo, asiento a 46 cm). En las salas es la de
+## museo, con cojín de cuero; con parque = true es de listones con espaldar.
+## El giro va en grados; a 0 la banca corre a lo largo de x.
+func banca(x: float, z: float, giro: float, y: float = 0.0, parque: bool = false) -> void:
+	var g: float = deg_to_rad(giro)
+	var bas := Basis(Vector3.UP, g)
+	var o := Vector3(x, y, z)
+	var metal: Material = material(Color("2d3034"), 0.45)
+	if parque:
+		var tabla: Material = material(Color("7a5434"), 0.85)
+		for dz: float in [-0.16, 0.0, 0.16]:
+			caja_t(Vector3(1.8, 0.04, 0.13), Transform3D(bas, o + bas * Vector3(0, 0.44, dz)), tabla, false)
+		var inclinado := bas * Basis(Vector3.RIGHT, -0.2)
+		for dy: float in [0.62, 0.8]:
+			caja_t(Vector3(1.8, 0.11, 0.035), Transform3D(inclinado, o + bas * Vector3(0, dy, -0.25 - (dy - 0.6) * 0.2)), tabla, false)
+		for dx: float in [-0.8, 0.8]:
+			caja_t(Vector3(0.06, 0.44, 0.5), Transform3D(bas, o + bas * Vector3(dx, 0.22, 0)), metal, false)
+			caja_t(Vector3(0.06, 0.45, 0.06), Transform3D(bas, o + bas * Vector3(dx, 0.66, -0.27)), metal, false)
+			caja_t(Vector3(0.06, 0.05, 0.48), Transform3D(bas, o + bas * Vector3(dx, 0.66, -0.02)), metal, false)
+	else:
+		var cuero: Material = material(Color("3a2a22"), 0.6)
+		caja_t(Vector3(1.8, 0.1, 0.5), Transform3D(bas, o + bas * Vector3(0, 0.41, 0)), cuero, false)
+		for dx: float in [-0.78, 0.78]:
+			caja_t(Vector3(0.05, 0.36, 0.44), Transform3D(bas, o + bas * Vector3(dx, 0.18, 0)), metal, false)
+		caja_t(Vector3(1.56, 0.04, 0.04), Transform3D(bas, o + bas * Vector3(0, 0.12, 0)), metal, false)
+	caja_t(Vector3(1.8, 0.46, 0.55), Transform3D(bas, o + Vector3.UP * 0.23), null, true)
 
 
 func carro(pos: Vector3, color: Color, giro: float = 0.0) -> void:

@@ -37,6 +37,9 @@ var _enfriar_tiro: float = 1.0
 var _desenfundar: float = -1.0
 var _armado: bool = false
 var _pasos: float = 0.0
+var _trabado: float = 0.0          ## Segundos intentando avanzar sin moverse.
+var _rodeo: Vector3 = Vector3.ZERO ## Paso al costado para soltarse de una esquina.
+var _rodeo_tiempo: float = 0.0
 var _agente: NavigationAgent3D
 var _cuerpo: Cuerpo
 var _icono: Label3D
@@ -48,7 +51,8 @@ var _zonas: Array[ZonaImpacto] = []
 func _ready() -> void:
 	add_to_group("guardias")
 	collision_layer = Juego.CAPA_ENEMIGO
-	collision_mask = Juego.CAPA_MUNDO | Juego.CAPA_JUGADOR | Juego.CAPA_ENEMIGO
+	# No chocan entre ellos: en la escalera, dos guardias de frente se trababan.
+	collision_mask = Juego.CAPA_MUNDO | Juego.CAPA_JUGADOR
 
 	var forma := CapsuleShape3D.new()
 	forma.radius = 0.35
@@ -75,7 +79,11 @@ func _ready() -> void:
 	add_child(_icono)
 
 	_agente = NavigationAgent3D.new()
-	_agente.path_desired_distance = 0.6
+	# Con 0.6 cortaba las esquinas y se estrellaba con la punta de las barandas. La
+	# distancia es en 3D y la ruta va 0.45 m sobre el piso: 0.55 deja ~0.3 m en horizontal.
+	_agente.path_desired_distance = 0.55
+	# La ruta pasa por el centro de los bordes de la malla, no pegada a las esquinas.
+	_agente.path_postprocessing = NavigationPathQueryParameters3D.PATH_POSTPROCESSING_EDGECENTERED
 	_agente.target_desired_distance = 0.8
 	_agente.height = 1.8
 	_agente.radius = 0.4
@@ -293,16 +301,42 @@ func _avanzar(vel: float, delta: float, animacion: String) -> void:
 	if dir.length() < 0.05:
 		return
 	dir = dir.normalized()
+	if _rodeo_tiempo > 0.0:
+		_rodeo_tiempo -= delta
+		dir = (dir + _rodeo).normalized()
+	var antes: Vector3 = global_position
 	velocity.x = dir.x * vel
 	velocity.z = dir.z * vel
 	velocity.y = -2.0
 	move_and_slide()
+	_revisar_trabado(antes, vel, delta)
 	_mirar(dir, delta)
 	_cuerpo.reproducir(animacion)
 	_pasos -= delta * (vel / VEL_PATRULLA)
 	if _pasos <= 0.0:
 		_pasos = INTERVALO_PASOS * 1.5
-		Sfx.en(self, "paso", global_position, -6.0, 14.0)
+		Sfx.en(self, "paso", global_position, -9.0, 14.0)
+
+
+## Si lleva medio segundo empujando sin avanzar (una esquina, una baranda), da un
+## paso al costado por un momento. Si sigue igual, pide la ruta de nuevo.
+func _revisar_trabado(antes: Vector3, vel: float, delta: float) -> void:
+	var avance: float = Vector2(global_position.x - antes.x, global_position.z - antes.z).length()
+	if avance > vel * delta * 0.25:
+		_trabado = maxf(_trabado - delta, 0.0)
+		return
+	_trabado += delta
+	if _trabado > 0.5 and _rodeo_tiempo <= 0.0:
+		var hacia: Vector3 = _agente.get_next_path_position() - global_position
+		hacia.y = 0.0
+		var costado: Vector3 = Vector3.UP.cross(hacia.normalized()) * (1.0 if randf() < 0.5 else -1.0)
+		if is_on_wall():
+			costado = (costado + get_wall_normal() * 1.5).normalized()
+		_rodeo = costado
+		_rodeo_tiempo = 0.45
+	if _trabado > 2.0:
+		_trabado = 0.0
+		_ir_a(_agente.target_position)
 
 
 func _mirar(dir: Vector3, delta: float) -> void:

@@ -1,0 +1,117 @@
+LISTA DE IMÁGENES QUE NECESITA EL JUEGO
+=======================================
+
+ESTADO (8 de noviembre de 2026)
+-------------------------------
+YA ESTÁN EN EL JUEGO: violencia, decoracion, policarpa, grabado_rojas,
+  septima_papeleta, y para el bolso: lechuga, baligrafo, camiseta_lucho,
+  poporo_quimbaya.
+HAY QUE CAMBIARLAS:
+  - ventana_gay: la imagen es una miniatura de YouTube con una presentadora
+    y letras encima. Hace falta la portada de la revista sola.
+  - mandolina: parece otro bodegón de Botero, no el de 1957.
+    Busquen "Naturaleza muerta con mandolina, 1957" en banrepcultural.
+  - bolivar_figueroa: la imagen es otro retrato de Bolívar (el de la
+    inscripción "natural de Caracas"). El de Figueroa de 1819 tiene a una
+    indígena que representa a América a su lado. Por ahora no se usa.
+FALTAN: cuadro_enlace (del compañero), retratos_mudos, monjas, chatarra, negret,
+  afiche_pizarro, afiche_jaramillo, bandera_castillo (opcional, ya sale una
+  de colores), botero_violencia (opcional).
+TODAS: las que llegaron miden entre 250 y 830 px. Se ven, pero borrosas de
+  cerca. Si encuentran versiones de 1000 px o más, mejor.
+NO USÉ los archivos gemini-code-*.txt: los inventó una IA (medidas y títulos
+  sin fuente, enlaces genéricos). Para el .txt de cada imagen sirve el enlace
+  real de donde la bajaron.
+
+Dónde dejarlas: en esta misma carpeta (aportes/obras/).
+Nombre del archivo: exactamente el que aparece entre [corchetes], en minúsculas,
+sin tildes ni espacios. Ejemplo: violencia.jpg
+
+FORMATO
+-------
+Cuadros, afiches, fotos y documentos planos:
+  - JPG, de frente, sin marco, sin reflejos ni sombras de la persona que toma la foto.
+  - Recortada justo al borde de la obra (sin pared alrededor).
+  - Lado más largo entre 1000 y 2048 px.
+
+Objetos (pluma, camiseta, bandera, poporo, custodia, esculturas):
+  - PNG CON FONDO TRANSPARENTE (se puede quitar el fondo con remove.bg o Photoroom).
+  - Lado más largo entre 1000 y 2048 px.
+  - Si consiguen más de una vista (frente, lado), mejor: pónganles _frente y _lado.
+
+Para cada imagen, si se puede, creen un .txt con el mismo nombre que diga:
+  - El enlace de donde la sacaron (para los créditos).
+  - Las medidas reales en centímetros (alto x ancho), si la ficha del museo las da.
+    Con eso el cuadro sale del tamaño real en la pared.
+
+Las que tienen "PENDIENTE" son datos que no pude confirmar. Si al buscar la imagen
+encuentran la ficha oficial, copien el título exacto, año y medidas en el .txt.
+
+
+=====================================================================
+1. OBJETIVO ESPECIAL (siempre está en la lista)
+=====================================================================
+[cuadro_enlace.jpg]  Cuadro del juego del compañero del museo geológico.
+                     Título, autor y año: PENDIENTE (los define él).
+                     Mientras no llegue, el juego usa un cuadro provisional.
+
+
+=====================================================================
+2. MUSEO DE ARTE MIGUEL URRUTIA (ya están en el juego, falta la imagen)
+=====================================================================
+[violencia.jpg]        Violencia - Alejandro Obregón, 1962
+[decoracion.jpg]       Decoración de interiores - Beatriz González, 1981
+[retratos_mudos.jpg]   Retratos mudos - Beatriz González (año PENDIENTE)
+[mandolina.jpg]        Mandolina - Fernando Botero, 1957
+[monjas.jpg]           Una de las Monjas muertas - atribuido a Victorino García Romero, ca. 1809
+[chatarra.png]         Una escultura en chatarra de Feliza Bursztyn (título exacto PENDIENTE)
+[negret.png]           Un Aparato mágico de Édgar Negret (cuál, PENDIENTE)
+[lechuga.png]          Custodia La Lechuga - José de Galaz, 1700-1707
+
+
+=====================================================================
+3. MUSEO NACIONAL DE COLOMBIA
+=====================================================================
+Estas son piezas que el Gobierno mandó retirar de las salas el 15 de octubre
+de 2026 y que un juez ordenó devolver (El Tiempo, 16-10-2026; Vanguardia,
+29 y 30-10-2026). Por eso son "las más polémicas" del museo ahora mismo.
+
+[afiche_pizarro.jpg]      Afiche de la campaña presidencial de Carlos Pizarro (M-19), 1990
+[afiche_jaramillo.jpg]    Afiche de la campaña presidencial de Bernardo Jaramillo Ossa (UP), 1990
+[baligrafo.png]           El "Balígrafo": la pluma hecha con una bala con la que se firmó
+                          el Acuerdo de Paz de 2016
+[septima_papeleta.jpg]    Tarjetón de la Séptima Papeleta (1990, Constituyente de 1991)
+[bandera_castillo.png]    Bandera del orgullo de la activista Elizabeth Castillo
+[ventana_gay.jpg]         Portada de la revista "La Ventana Gay" n.º 2, de Manuel Antonio
+                          Velandia y León Zuleta
+[camiseta_lucho.png]      Camiseta de Lucho Herrera (cuál camiseta exactamente, PENDIENTE)
+[grabado_rojas.jpg]       Uno de los grabados de Miguel Ángel Rojas que retiraron
+                          (título PENDIENTE)
+
+Opcionales, piezas clásicas del Museo Nacional (verifiquen en la ficha del museo
+que sigan en su colección antes de buscarlas):
+[bolivar_figueroa.jpg]    Simón Bolívar, Libertador y Padre de la Patria - Pedro José Figueroa, 1819
+[policarpa.jpg]           Policarpa Salavarrieta marcha al suplicio - anónimo, 1825
+[botero_violencia.jpg]    Una obra de la serie sobre la violencia que Botero donó al museo
+                          en 2004 (cuál, PENDIENTE)
+
+
+=====================================================================
+4. MUSEO DEL ORO (una sola pieza)
+=====================================================================
+[poporo_quimbaya.png]     Poporo Quimbaya. El Banco de la República lo compró en 1939
+                          para que no lo fundieran, y con él empieza la historia del
+                          Museo del Oro.
+   (Alternativa, si prefieren otra: [balsa_muisca.png], la Balsa Muisca, hallada
+    en 1969 en una cueva de Pasca, Cundinamarca.)
+
+
+=====================================================================
+DÓNDE BUSCAR
+=====================================================================
+- Museo Nacional: https://www.museonacional.gov.co (colecciones en línea)
+- Urrutia y Museo del Oro: https://www.banrepcultural.org/coleccion-de-arte
+  y https://www.banrepcultural.org/bogota/museo-del-oro
+- Google Arts & Culture tiene fotos buenas de muchas de estas piezas.
+- Afiches y piezas retiradas: notas de prensa de octubre de 2026 (El Tiempo,
+  Vanguardia, Cambio, El Colombiano) suelen traer la foto.

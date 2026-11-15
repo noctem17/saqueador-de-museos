@@ -25,9 +25,12 @@ const SENSIBILIDAD: float = 0.0025
 
 var personaje: Personaje = Personaje.POLO
 var polo_rescatado: bool = false
+var cargar_peso: bool = true   ## Las obras del bolso lo hacen más lento (en la pelea final, no).
 var agachado: bool = false
 ## Afuera de la muralla Polo es un peatón más: ni lo ven ni lo oyen. La misión lo actualiza.
 var dentro: bool = true
+## Ningún foco lo alumbra: los guardias lo ven a menos distancia. La misión lo actualiza.
+var en_sombra: bool = false
 var corriendo: bool = false
 var vida: int = 100
 var balas: int = BALAS
@@ -179,7 +182,7 @@ func _mover(delta: float, bloqueado: bool) -> void:
 		entrada = Vector2.ZERO
 	corriendo = not bloqueado and Input.is_action_pressed("correr") and entrada.length() > 0.1 and not agachado
 	var vel: float = VEL_AGACHADO if agachado else (VEL_CORRER if corriendo else VEL_CAMINAR)
-	if personaje == Personaje.POLO:
+	if personaje == Personaje.POLO and cargar_peso:
 		vel *= 1.0 - 0.06 * Juego.robadas.size()   # Cada obra pesa en el bolso.
 	var dir: Vector3 = global_basis * Vector3(entrada.x, 0.0, entrada.y)
 	velocity.x = dir.x * vel
@@ -202,7 +205,7 @@ func _mover(delta: float, bloqueado: bool) -> void:
 		_pasos -= delta
 		if _pasos <= 0.0:
 			_pasos = 0.32 if corriendo else (0.7 if agachado else 0.48)
-			Sfx.plano(self, "paso", -6.0 if corriendo else (-22.0 if agachado else -13.0))
+			Sfx.plano(self, "paso", -11.0 if corriendo else (-26.0 if agachado else -18.0))
 	# Balanceo leve de cámara al andar.
 	var horizontal: float = Vector2(velocity.x, velocity.z).length()
 	_balanceo += delta * horizontal * 2.4

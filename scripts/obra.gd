@@ -1,7 +1,13 @@
 class_name Obra
 extends Interactuable
-## Cuadro, escultura u objeto expuesto. Al robar un cuadro queda el marco vacío en
-## la pared: esa ausencia es la crítica del juego, así que se queda en la sala.
+## Cuadro, escultura u objeto expuesto. Al robar una pieza queda el marco vacío en
+## la pared o la vitrina vacía en su pedestal: esa ausencia es la crítica del juego,
+## así que se queda en la sala.
+##
+## Los cuadros usan la imagen de res://arte/. Los objetos (pluma, poporo, camiseta...)
+## se arman aquí con figuras simples; su foto real solo se ve al leerlos en el bolso.
+
+const COLOR_PEDESTAL := Color("efeae0")
 
 var datos: Dictionary = {}
 var robada: bool = false
@@ -49,85 +55,280 @@ func _ficha_corta() -> String:
 	return "%s, de %s" % [datos["titulo"], datos["autor"]]
 
 
+# ---------------------------------------------------------------- en la pared
+
 func _armar_cuadro() -> void:
 	var tam: Vector2 = datos["tam"]
-	var mat_marco := StandardMaterial3D.new()
-	mat_marco.albedo_color = Color("3a2a1c")
-	var ancho: float = tam.x + 0.16
-	var alto: float = tam.y + 0.16
-	for liston: Array in [
-		[Vector3(ancho, 0.08, 0.07), Vector3(0, tam.y * 0.5 + 0.04, 0.035)],
-		[Vector3(ancho, 0.08, 0.07), Vector3(0, -tam.y * 0.5 - 0.04, 0.035)],
-		[Vector3(0.08, alto, 0.07), Vector3(-tam.x * 0.5 - 0.04, 0, 0.035)],
-		[Vector3(0.08, alto, 0.07), Vector3(tam.x * 0.5 + 0.04, 0, 0.035)],
-	]:
-		var m := MeshInstance3D.new()
-		var caja := BoxMesh.new()
-		caja.size = liston[0]
-		m.mesh = caja
-		m.position = liston[1]
-		m.material_override = mat_marco
-		add_child(m)
+	var tela: bool = datos.get("tela", false)
+	if tela:
+		# Bandera: tela colgada de una varilla, sin marco.
+		_malla(_cilindro(0.012, tam.x + 0.12), Vector3(0, tam.y * 0.5 + 0.03, 0.05), Vector3(0, 0, PI * 0.5), _metal(Color("8c8f94"), 0.4), self)
+	else:
+		var mat_marco := StandardMaterial3D.new()
+		mat_marco.albedo_color = Color("3a2a1c")
+		var ancho: float = tam.x + 0.16
+		var alto: float = tam.y + 0.16
+		for liston: Array in [
+			[Vector3(ancho, 0.08, 0.07), Vector3(0, tam.y * 0.5 + 0.04, 0.035)],
+			[Vector3(ancho, 0.08, 0.07), Vector3(0, -tam.y * 0.5 - 0.04, 0.035)],
+			[Vector3(0.08, alto, 0.07), Vector3(-tam.x * 0.5 - 0.04, 0, 0.035)],
+			[Vector3(0.08, alto, 0.07), Vector3(tam.x * 0.5 + 0.04, 0, 0.035)],
+		]:
+			_malla(_caja(liston[0]), liston[1], Vector3.ZERO, mat_marco, self)
 
-	var lienzo := MeshInstance3D.new()
 	var quad := QuadMesh.new()
 	quad.size = tam
-	lienzo.mesh = quad
 	var mat := StandardMaterial3D.new()
 	mat.albedo_texture = _textura()
-	mat.roughness = 0.75
-	lienzo.material_override = mat
-	lienzo.position.z = 0.04
-	_contenido.add_child(lienzo)
+	mat.roughness = 0.9 if tela else 0.75
+	_malla(quad, Vector3(0, 0, 0.04), Vector3.ZERO, mat, _contenido)
 
 	agregar_colision(Vector3(tam.x + 0.16, tam.y + 0.16, 0.12), Vector3(0, 0, 0.06))
 	_crear_placa(Vector3(tam.x * 0.5 + 0.42, -0.45, 0.02))
 
 
+# ---------------------------------------------------------------- en pedestal
+
+## El origen es la cara de arriba del pedestal. La vitrina y el pedestal quedan
+## aunque la pieza se la lleven.
 func _armar_pieza(tipo: String) -> void:
+	_pedestal()
+	var modelo: String = datos.get("modelo", "")
+	var vitrina := Vector3.ZERO   # Tamaño de la urna de vidrio; cero = sin vitrina.
+	match modelo:
+		"custodia":
+			_custodia()
+			vitrina = Vector3(0.6, 0.85, 0.5)
+		"baligrafo":
+			_baligrafo()
+			vitrina = Vector3(0.55, 0.3, 0.4)
+		"poporo":
+			_poporo()
+			vitrina = Vector3(0.45, 0.5, 0.45)
+		"camiseta":
+			_camiseta()
+			vitrina = Vector3(0.66, 1.08, 0.5)
+		"documento":
+			_documento()
+			vitrina = Vector3(0.6, 0.26, 0.5)
+		_:
+			if tipo == "escultura":
+				_escultura()
+	if vitrina != Vector3.ZERO:
+		_vitrina(vitrina)
+	var alto: float = maxf(vitrina.y, (datos["tam"] as Vector2).y)
+	agregar_colision(Vector3(0.7, alto, 0.7), Vector3(0, alto * 0.5, 0))
+	_crear_placa(Vector3(0, -0.28, 0.36))
+
+
+func _pedestal() -> void:
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = COLOR_PEDESTAL
+	mat.roughness = 0.85
+	_malla(_caja(Vector3(0.7, 1.0, 0.7)), Vector3(0, -0.5, 0), Vector3.ZERO, mat, self)
+	# Cuerpo sólido aparte: el jugador y los guardias no atraviesan el pedestal.
+	var solido := StaticBody3D.new()
+	solido.collision_layer = Juego.CAPA_MUNDO
+	solido.collision_mask = 0
+	var col := CollisionShape3D.new()
+	var forma := BoxShape3D.new()
+	forma.size = Vector3(0.7, 1.0, 0.7)
+	col.shape = forma
+	col.position.y = -0.5
+	solido.add_child(col)
+	add_child(solido)
+
+
+func _vitrina(tam: Vector3) -> void:
+	var vidrio := StandardMaterial3D.new()
+	vidrio.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	vidrio.albedo_color = Color(0.85, 0.93, 1.0, 0.12)
+	vidrio.roughness = 0.05
+	vidrio.metallic_specular = 1.0
+	vidrio.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_malla(_caja(tam), Vector3(0, tam.y * 0.5 + 0.002, 0), Vector3.ZERO, vidrio, self)
+
+
+## Custodia de La Lechuga: pie, vara y sol de oro con esmeraldas.
+func _custodia() -> void:
+	var oro := _metal(Color(datos["paleta"][0] as String), 0.3, 0.18)
+	var esmeralda := _metal(Color(datos["paleta"][1] as String), 0.2, 0.25)
+	_malla(_cilindro(0.15, 0.04), Vector3(0, 0.02, 0), Vector3.ZERO, oro)
+	_malla(_cilindro(0.025, 0.25), Vector3(0, 0.17, 0), Vector3.ZERO, oro)
+	var sol := _malla(_esfera(0.21), Vector3(0, 0.5, 0), Vector3.ZERO, oro)
+	sol.scale.z = 0.2
+	for i: int in 16:
+		var ang: float = TAU * i / 16.0
+		_malla(_esfera(0.025), Vector3(cos(ang) * 0.17, 0.5 + sin(ang) * 0.17, 0.04), Vector3.ZERO, esmeralda)
+
+
+## Escultura: planos metálicos encajados, al estilo de Bursztyn o Negret.
+func _escultura() -> void:
 	var tam: Vector2 = datos["tam"]
 	var paleta: Array = datos["paleta"]
-	var color_a := Color(paleta[0] as String)
-	var color_b := Color(paleta[1] as String)
-	if tipo == "objeto":
-		# Custodia: pie, vara y sol de oro con esmeraldas.
-		_pieza(CylinderMesh.new(), Vector3(0.3, 0.04, 0.3), Vector3(0, 0.02, 0), color_a, true)
-		_pieza(CylinderMesh.new(), Vector3(0.05, 0.25, 0.05), Vector3(0, 0.17, 0), color_a, true)
-		_pieza(SphereMesh.new(), Vector3(0.42, 0.42, 0.09), Vector3(0, 0.5, 0), color_a, true)
-		for i: int in 16:
-			var ang: float = TAU * i / 16.0
-			_pieza(SphereMesh.new(), Vector3.ONE * 0.05, Vector3(cos(ang) * 0.17, 0.5 + sin(ang) * 0.17, 0.04), color_b, true)
-	else:
-		# Escultura: planos metálicos encajados, reconocibles aunque sean provisionales.
-		var semilla := RandomNumberGenerator.new()
-		semilla.seed = hash(datos["id"])
-		for i: int in 7:
-			var escala := Vector3(semilla.randf_range(0.12, 0.5), semilla.randf_range(0.1, 0.45), semilla.randf_range(0.05, 0.3))
-			var pos := Vector3(semilla.randf_range(-0.22, 0.22), 0.15 + tam.y * 0.7 * float(i) / 7.0, semilla.randf_range(-0.14, 0.14))
-			var pieza := _pieza(BoxMesh.new(), escala, pos, color_a if i % 2 == 0 else color_b, false)
-			pieza.rotation = Vector3(semilla.randf_range(-0.5, 0.5), semilla.randf_range(-1.5, 1.5), semilla.randf_range(-0.5, 0.5))
-	agregar_colision(Vector3(tam.x, tam.y, tam.x), Vector3(0, tam.y * 0.5, 0))
-	_crear_placa(Vector3(0, -0.28, 0.46))
+	var semilla := RandomNumberGenerator.new()
+	semilla.seed = hash(datos["id"])
+	for i: int in 7:
+		var lado := Vector3(semilla.randf_range(0.12, 0.5), semilla.randf_range(0.1, 0.45), semilla.randf_range(0.05, 0.3))
+		var pos := Vector3(semilla.randf_range(-0.22, 0.22), 0.15 + tam.y * 0.7 * float(i) / 7.0, semilla.randf_range(-0.14, 0.14))
+		var giro := Vector3(semilla.randf_range(-0.5, 0.5), semilla.randf_range(-1.5, 1.5), semilla.randf_range(-0.5, 0.5))
+		_malla(_caja(lado), pos, giro, _metal(Color(paleta[i % 2] as String), 0.5))
 
 
-func _pieza(malla: PrimitiveMesh, escala: Vector3, pos: Vector3, color: Color, brilla: bool) -> MeshInstance3D:
+## El Balígrafo: cartucho de bala de latón con punta de esfero, sobre su base de madera.
+func _baligrafo() -> void:
+	var laton := _metal(Color("d9b04a"), 0.25, 0.15)
+	var negro := _metal(Color("1b1b1d"), 0.6)
+	negro.metallic = 0.0
+	var madera := StandardMaterial3D.new()
+	madera.albedo_color = Color("7a4a26")
+	madera.roughness = 0.7
+	var grupo := Node3D.new()
+	grupo.scale = Vector3.ONE * 1.6   # Un poco más grande que la real (14 cm) para que se vea.
+	grupo.rotation.y = 0.3
+	_contenido.add_child(grupo)
+	_malla(_caja(Vector3(0.24, 0.035, 0.07)), Vector3(0, 0.0175, 0), Vector3.ZERO, madera, grupo)
+	var acostado := Vector3(0, 0, PI * 0.5)
+	_malla(_cilindro(0.012, 0.11), Vector3(0.02, 0.05, 0), acostado, laton, grupo)        # Vaina.
+	_malla(_cilindro(0.0135, 0.008), Vector3(0.078, 0.05, 0), acostado, laton, grupo)     # Culote.
+	_malla(_cilindro(0.011, 0.04), Vector3(-0.055, 0.05, 0), acostado, negro, grupo)      # Agarre.
+	var punta := CylinderMesh.new()
+	punta.top_radius = 0.009
+	punta.bottom_radius = 0.0
+	punta.height = 0.025
+	_malla(punta, Vector3(-0.0875, 0.05, 0), acostado, _metal(Color("b8bcc2"), 0.3), grupo)
+
+
+## Poporo Quimbaya: cuerpo redondo, cuello largo, cuatro esferas arriba y aro de base.
+func _poporo() -> void:
+	var oro := _metal(Color("e2ad35"), 0.25, 0.2)
+	var grupo := Node3D.new()
+	grupo.scale = Vector3.ONE * 1.3
+	_contenido.add_child(grupo)
+	var base := CylinderMesh.new()
+	base.top_radius = 0.035
+	base.bottom_radius = 0.045
+	base.height = 0.03
+	_malla(base, Vector3(0, 0.015, 0), Vector3.ZERO, oro, grupo)
+	var cuerpo := _malla(_esfera(0.075), Vector3(0, 0.1, 0), Vector3.ZERO, oro, grupo)
+	cuerpo.scale.y = 0.9
+	var cuello := CylinderMesh.new()
+	cuello.top_radius = 0.016
+	cuello.bottom_radius = 0.042
+	cuello.height = 0.1
+	_malla(cuello, Vector3(0, 0.205, 0), Vector3.ZERO, oro, grupo)
+	_malla(_cilindro(0.022, 0.012), Vector3(0, 0.26, 0), Vector3.ZERO, oro, grupo)
+	for i: int in 4:
+		var ang: float = TAU * i / 4.0
+		_malla(_esfera(0.021), Vector3(cos(ang) * 0.024, 0.285, sin(ang) * 0.024), Vector3.ZERO, oro, grupo)
+
+
+## Camiseta del Café de Colombia sobre un maniquí sin cabeza.
+func _camiseta() -> void:
+	var tela := StandardMaterial3D.new()
+	tela.albedo_texture = _textura_camiseta()
+	tela.roughness = 0.95
+	var blanca := StandardMaterial3D.new()
+	blanca.albedo_color = Color("f5f5f2")
+	blanca.roughness = 0.95
+	var soporte := _metal(Color("2a2c30"), 0.5)
+	_malla(_cilindro(0.02, 0.36), Vector3(0, 0.18, 0), Vector3.ZERO, soporte)
+	_malla(_caja(Vector3(0.42, 0.56, 0.2)), Vector3(0, 0.64, 0), Vector3.ZERO, blanca)
+	# El frente va aparte: una caja reparte su textura entre las seis caras.
+	var frente := QuadMesh.new()
+	frente.size = Vector2(0.42, 0.56)
+	_malla(frente, Vector3(0, 0.64, 0.101), Vector3.ZERO, tela)
+	for lado: float in [-1.0, 1.0]:
+		_malla(_caja(Vector3(0.15, 0.17, 0.18)), Vector3(lado * 0.255, 0.82, 0), Vector3(0, 0, lado * 0.45), blanca)
+	_malla(_cilindro(0.06, 0.04), Vector3(0, 0.94, 0), Vector3.ZERO, _metal(Color("1d3f8f"), 0.8))
+	var letras := Label3D.new()
+	letras.text = "CAFÉ DE\nCOLOMBIA"
+	letras.font_size = 32
+	letras.pixel_size = 0.0016
+	letras.outline_size = 0
+	letras.modulate = Color("15171a")
+	letras.position = Vector3(0, 0.78, 0.104)
+	_contenido.add_child(letras)
+
+
+## Papel inclinado sobre un atril, como en una vitrina de documentos.
+func _documento() -> void:
+	var atril := StandardMaterial3D.new()
+	atril.albedo_color = Color("2b2d31")
+	var inclinado := Vector3(0.35, 0, 0)   # Se inclina hacia el frente (+z), donde está la placa.
+	_malla(_caja(Vector3(0.48, 0.02, 0.36)), Vector3(0, 0.1, 0), inclinado, atril)
+	var tex := _textura()
+	var proporcion: float = float(tex.get_width()) / float(tex.get_height())
+	var alto: float = 0.3
+	var ancho: float = alto * proporcion
+	if ancho > 0.42:
+		ancho = 0.42
+		alto = ancho / proporcion
+	var papel := QuadMesh.new()
+	papel.size = Vector2(ancho, alto)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_texture = tex
+	mat.roughness = 0.9
+	# El quad mira hacia +z; se acuesta sobre el atril, apenas encima de su cara.
+	_malla(papel, Vector3(0, 0.1, 0) + Vector3(0, cos(0.35), sin(0.35)) * 0.012, Vector3(-PI * 0.5 + 0.35, 0, 0), mat)
+
+
+# ---------------------------------------------------------------- utilidades
+
+func _malla(malla: Mesh, pos: Vector3, giro: Vector3, mat: Material, padre: Node3D = null) -> MeshInstance3D:
 	var m := MeshInstance3D.new()
 	m.mesh = malla
-	m.scale = escala
 	m.position = pos
+	m.rotation = giro
+	m.material_override = mat
+	(padre if padre else _contenido).add_child(m)
+	return m
+
+
+func _caja(tam: Vector3) -> BoxMesh:
+	var b := BoxMesh.new()
+	b.size = tam
+	return b
+
+
+func _cilindro(radio: float, alto: float) -> CylinderMesh:
+	var c := CylinderMesh.new()
+	c.top_radius = radio
+	c.bottom_radius = radio
+	c.height = alto
+	c.radial_segments = 20
+	return c
+
+
+func _esfera(radio: float) -> SphereMesh:
+	var s := SphereMesh.new()
+	s.radius = radio
+	s.height = radio * 2.0
+	return s
+
+
+## Metal. Con "brillo" > 0 emite un poco de su propio color: así el oro se ve dorado
+## aunque la sala esté oscura y no haya nada amarillo que reflejar.
+func _metal(color: Color, rugosidad: float, brillo: float = 0.0) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = color
-	mat.metallic = 0.85
-	mat.roughness = 0.3 if brilla else 0.5
-	m.material_override = mat
-	_contenido.add_child(m)
-	return m
+	mat.metallic = 0.9 if brillo == 0.0 else 0.6
+	mat.roughness = rugosidad
+	if brillo > 0.0:
+		mat.emission_enabled = true
+		mat.emission = color
+		mat.emission_energy_multiplier = brillo
+	return mat
 
 
 func _crear_placa(pos: Vector3) -> void:
 	_placa = Label3D.new()
 	var anio: String = datos["anio"]
-	_placa.text = "%s\n%s%s" % [datos["titulo"], datos["autor"], "" if anio.is_empty() else "\n" + anio]
+	var texto: String = "%s\n%s%s" % [datos["titulo"], datos["autor"], "" if anio.is_empty() else "\n" + anio]
+	var prestamo: String = Catalogo.museo(datos.get("museo", "")).get("placa", "")
+	if prestamo != "":
+		texto += "\n" + prestamo
+	_placa.text = texto
 	_placa.font_size = 26
 	_placa.pixel_size = 0.0022
 	_placa.outline_size = 0
@@ -140,13 +341,34 @@ func _crear_placa(pos: Vector3) -> void:
 
 
 func _textura() -> Texture2D:
-	var id: String = datos["id"]
-	for ext: String in ["jpg", "png", "jpeg", "webp"]:
-		var ruta: String = "res://arte/%s.%s" % [id, ext]
-		if ResourceLoader.exists(ruta):
-			var tex: Texture2D = load(ruta)
-			return tex
+	var ruta: String = Catalogo.imagen(datos["id"])
+	if ruta != "":
+		return load(ruta)
+	if datos.get("tela", false):
+		return _textura_franjas()
 	return _textura_provisional()
+
+
+## Franjas horizontales con los colores de la paleta (la bandera, hasta tener su foto).
+func _textura_franjas() -> ImageTexture:
+	var paleta: Array = datos["paleta"]
+	var img := Image.create(8, paleta.size() * 8, false, Image.FORMAT_RGB8)
+	for i: int in paleta.size():
+		img.fill_rect(Rect2i(0, i * 8, 8, 8), Color(paleta[i] as String))
+	return ImageTexture.create_from_image(img)
+
+
+## Frente de la camiseta: blanca con los triángulos azul, amarillo y rojo abajo.
+func _textura_camiseta() -> ImageTexture:
+	var paleta: Array = datos["paleta"]
+	var img := Image.create(120, 160, false, Image.FORMAT_RGB8)
+	img.fill(Color(paleta[0] as String))
+	var picos: Array = [[30, 70, 1], [62, 95, 2], [92, 110, 3]]   # [centro x, altura de la punta, color]
+	for pico: Array in picos:
+		for y: int in range(pico[1], 160):
+			var medio: int = int((y - (pico[1] as int)) * 0.6)
+			img.fill_rect(Rect2i((pico[0] as int) - medio, y, medio * 2 + 1, 1), Color(paleta[pico[2]] as String))
+	return ImageTexture.create_from_image(img)
 
 
 ## Composición abstracta con la paleta de la obra, hasta tener la imagen real.

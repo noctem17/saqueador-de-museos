@@ -5,6 +5,7 @@ extends Node
 signal alarma_disparada(motivo: String)
 signal agenda_cambio
 signal bolso_cambio
+signal llaves_cambio
 signal aviso(texto: String)
 signal ruido(posicion: Vector3, radio: float)
 
@@ -14,12 +15,14 @@ const CAPA_ENEMIGO: int = 4
 const CAPA_INTERACTUABLE: int = 8
 const CAPA_IMPACTO: int = 16
 
-const OBRAS_POR_MISION: int = 4
+const OBRAS_POR_MISION: int = 7
+const MINIMO_POR_MUSEO: int = 2
 const COLECCIONABLES_POR_MISION: int = 6
 
 const ESCENA_MENU: String = "res://escenas/menu.tscn"
 const ESCENA_MISION: String = "res://escenas/mision.tscn"
 const ESCENA_FINAL: String = "res://escenas/final.tscn"
+const ESCENA_CARRETERA: String = "res://escenas/carretera.tscn"   ## Jefe final: solo si se llevan todas.
 
 var lista: Array[Dictionary] = []   ## Obras encargadas en esta partida.
 var anotadas: int = 0               ## Cuántas alcanzó a anotar Polo durante la llamada.
@@ -29,6 +32,12 @@ var alarma: bool = false
 var control_bloqueado: bool = true
 var sospecha: float = 0.0           ## Máxima detección actual, de 0 a 1, para la interfaz.
 var resultado: String = ""          ## "completo", "parcial" o "fallo".
+## Modo exploración: el museo sin guardias, cámaras ni llamada, para recorrerlo.
+## Lo prende el menú y dura hasta que se vuelva a elegir "Jugar".
+var modo_exploracion: bool = false
+var llaves: Array[String] = []      ## Llaves del candado de la Sala 1 que ya tiene Polo.
+var mostro_presentado: bool = false ## Ya se vio la entrada completa de Mostro (las siguientes son cortas).
+var cine_cuadro_visto: bool = false ## Ya vio la escena del cuadro del MAMBO (y sabe de las llaves).
 var tiempo_mision: float = 0.0
 var ubicaciones: Dictionary[String, String] = {}   ## id de obra -> "Piso 2 · Sala 8 ..."
 
@@ -59,17 +68,24 @@ func _registrar_controles() -> void:
 		InputMap.action_add_event("disparar", clic)
 
 
-## Prepara una partida nueva: agenda distinta cada vez, con al menos una pieza que
-## no sea un cuadro para que haya que buscar también en los pedestales.
+## Prepara una partida nueva. Las piezas "fija" (el cuadro del MAMBO y la del Museo
+## del Oro) siempre están; el resto sale al azar, con al menos MINIMO_POR_MUSEO del
+## Urrutia y del Nacional. La agenda queda ordenada por museo, como sus secciones.
 func nueva_mision() -> void:
-	var cuadros: Array[Dictionary] = Catalogo.OBRAS.filter(func(o: Dictionary) -> bool: return o["tipo"] == "pintura")
-	var pedestal: Array[Dictionary] = Catalogo.OBRAS.filter(func(o: Dictionary) -> bool: return o["tipo"] != "pintura")
-	cuadros.shuffle()
-	pedestal.shuffle()
-	lista = [pedestal[0]]
-	lista.append_array(cuadros.slice(0, OBRAS_POR_MISION - 1))
-	lista.shuffle()
+	lista = Catalogo.OBRAS.filter(func(o: Dictionary) -> bool: return o.get("fija", false))
+	var resto: Array[Dictionary] = Catalogo.OBRAS.filter(func(o: Dictionary) -> bool: return not o.get("fija", false))
+	resto.shuffle()
+	for museo: String in ["urrutia", "nacional"]:
+		var del_museo: Array[Dictionary] = resto.filter(func(o: Dictionary) -> bool: return o["museo"] == museo)
+		for o: Dictionary in del_museo.slice(0, MINIMO_POR_MUSEO):
+			lista.append(o)
+			resto.erase(o)
+	lista.append_array(resto.slice(0, OBRAS_POR_MISION - lista.size()))
+	var orden: Array = Catalogo.MUSEOS.map(func(m: Dictionary) -> String: return m["id"])
+	lista.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return orden.find(a["museo"]) < orden.find(b["museo"]))
 	anotadas = 0
+	llaves = []
+	cine_cuadro_visto = false
 	robadas = []
 	bolso = []
 	alarma = false
@@ -95,6 +111,7 @@ func registrar_robo(obra: Dictionary) -> void:
 		"detalle": _credito(obra),
 		"texto": obra["texto"],
 		"clase": "obra",
+		"imagen": Catalogo.imagen(obra["id"]),
 	})
 	agenda_cambio.emit()
 	bolso_cambio.emit()
@@ -110,6 +127,17 @@ func registrar_coleccionable(c: Dictionary) -> void:
 	})
 	bolso_cambio.emit()
 	aviso.emit("Al bolso: %s (TAB para leer)" % c["nombre"])
+
+
+func tomar_llave(id: String) -> void:
+	if id in llaves:
+		return
+	llaves.append(id)
+	llaves_cambio.emit()
+	agenda_cambio.emit()
+	var faltan: int = 3 - llaves.size()
+	var cola: String = "Ya están las tres: a la Sala 1." if faltan == 0 else "Faltan %d." % faltan
+	aviso.emit("Llave %s. %s" % [Llaves.DATOS[id]["nombre"], cola])
 
 
 func disparar_alarma(motivo: String) -> void:

@@ -7,13 +7,27 @@ const PREFIJO: String = "CharacterArmature|"
 const BUCLES: Array[String] = ["Idle", "Idle_Neutral", "Idle_Gun", "Idle_Gun_Pointing", "Walk", "Run", "Run_Shoot"]
 
 const TIPOS: Dictionary[String, Dictionary] = {
+	# Polo y Mostro son los modelos cabezones que mandó un compañero. Se les puso
+	# esqueleto y las animaciones de Quaternius con herramientas/rigear_chibi.py.
+	# "cara": altura de los ojos (para los primeros planos); "agachado": cuánto
+	# baja el cuerpo en la pose agachada (las piernas son cortas).
 	"polo": {
-		"modelo": "res://modelos/polo.glb",
-		"colores": {"Skin": "3f2618", "Hair": "0f0b09", "Eyebrows": "0f0b09", "Purple": "22262d", "LightBlue": "191b20"},
+		"modelo": "res://modelos/polo_chibi.glb",
+		"colores": {},
+		"cara": 1.12,
+		"agachado": -0.14,
 	},
 	"mostro": {
-		"modelo": "res://modelos/mostro.glb",
-		"colores": {"Skin": "e8c4a6", "Hair": "1e1814", "Eyebrows": "1e1814", "Beard": "241a14", "Suit": "1b1e26", "Tie": "7a1420"},
+		"modelo": "res://modelos/mostro_chibi.glb",
+		"colores": {},
+		"cara": 1.12,
+		"agachado": -0.14,
+	},
+	"franchesca": {
+		"modelo": "res://modelos/franchesca.glb",
+		"colores": {},
+		"cara": 1.15,
+		"agachado": -0.16,
 	},
 	"guardia": {
 		"modelo": "res://modelos/guardia.glb",
@@ -98,7 +112,7 @@ func agachar() -> void:
 		_doblar("Foot" + lado, Vector3.RIGHT, -0.35)
 	_doblar("Abdomen", Vector3.RIGHT, 0.35)
 	_doblar("Neck", Vector3.RIGHT, -0.25)
-	_modelo.position.y = -0.42
+	_modelo.position.y = TIPOS[tipo].get("agachado", -0.42)
 
 
 func _doblar(hueso: String, eje: Vector3, angulo: float) -> void:
@@ -111,6 +125,32 @@ func _doblar(hueso: String, eje: Vector3, angulo: float) -> void:
 	var nuevo_global: Quaternion = Quaternion(eje, angulo) * global_q
 	_esqueleto.set_bone_pose_rotation(i, padre_q.inverse() * nuevo_global)
 	_esqueleto.force_update_all_bone_transforms()
+
+
+## Dobla un hueso (para poses hechas a mano, como el "6-7" de Mostro).
+func doblar(hueso: String, eje: Vector3, angulo: float) -> void:
+	_doblar(hueso, eje, angulo)
+
+
+## Silueta: todo el cuerpo negro y sin luz, para no revelar quién es.
+func silueta(activa: bool) -> void:
+	var negro: StandardMaterial3D = null
+	if activa:
+		negro = StandardMaterial3D.new()
+		negro.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		negro.albedo_color = Color(0.01, 0.01, 0.012)
+	for nodo: Node in _modelo.find_children("*", "MeshInstance3D", true, false):
+		(nodo as MeshInstance3D).material_override = negro
+
+
+## Pistola en la mano derecha (para la pose final de la presentación de Mostro).
+func sacar_pistola() -> Node3D:
+	if _arma_mano:
+		_arma_mano.visible = true
+		return _arma_mano
+	var datos: Array = TIPOS[tipo].get("pistola", [Vector3(-0.02, 0.09, 0.03), Vector3(0, 90, 90)])
+	_arma_mano = _poner_pistola("Wrist.R", datos[0] as Vector3, datos[1] as Vector3)
+	return _arma_mano
 
 
 func morir() -> void:
@@ -156,7 +196,9 @@ func _adjunto(hueso: String) -> Node3D:
 	a.bone_name = hueso
 	_esqueleto.add_child(a)
 	var metros := Node3D.new()
-	metros.scale = Vector3.ONE * 0.01
+	# Compensa la escala del esqueleto (100 en los de Quaternius, 1 en los cabezones).
+	var escala_esqueleto: float = _esqueleto.global_basis.get_scale().x / maxf(global_basis.get_scale().x, 0.0001)
+	metros.scale = Vector3.ONE / maxf(escala_esqueleto, 0.0001)
 	a.add_child(metros)
 	return metros
 

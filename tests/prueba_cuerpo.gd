@@ -173,7 +173,10 @@ func _correr() -> void:
 	j = mision.jugador
 	var lista_b: Array = Juego.lista.map(func(o: Dictionary) -> String: return o["id"])
 	var pos_b: Vector3 = mision.obras[0].global_position
-	revisar("agenda de 4 piezas", lista_b.size() == 4, lista_b)
+	revisar("agenda de %d piezas" % Juego.OBRAS_POR_MISION, lista_b.size() == Juego.OBRAS_POR_MISION, lista_b)
+	revisar("siempre está el cuadro del MAMBO", "cuadro_enlace" in lista_b, lista_b)
+	revisar("siempre está la pieza del Museo del Oro", "poporo_quimbaya" in lista_b, lista_b)
+	revisar("agenda sin repetidas", lista_b.size() == Juego.lista.map(func(o: Dictionary) -> String: return o["id"]).reduce(func(acc: Array, x: String) -> Array: return acc if x in acc else acc + [x], []).size())
 	revisar("agenda o sitios cambian entre partidas", lista_a != lista_b or pos_a != pos_b)
 	var con_pedestal: bool = Juego.lista.any(func(o: Dictionary) -> bool: return o["tipo"] != "pintura")
 	revisar("incluye una pieza de pedestal", con_pedestal)
@@ -255,6 +258,19 @@ func _correr() -> void:
 			await foto("03_marco_vacio")
 	revisar("agenda tachada", Juego.faltantes() == 0)
 
+	# Candado de la Sala 1: no abre sin las tres llaves; con ellas, sí.
+	var cand: Llaves.Candado = mision.candado
+	revisar("hay candado en la Sala 1", cand != null)
+	var llaves_en_mapa: int = mision.get_children().filter(func(n: Node) -> bool: return n is Llaves.Llave).size()
+	revisar("las tres llaves están en el mapa", llaves_en_mapa == 3, llaves_en_mapa)
+	revisar("sin llaves no abre", not cand.disponible(j))
+	for id: String in ["corazon", "estrella", "tigre"]:
+		Juego.tomar_llave(id)
+	revisar("con las tres llaves abre", cand.disponible(j))
+	cand.completar(j)
+	await frames(5)
+	revisar("la reja deja de estorbar", cand.collision_layer == 0)
+
 	# Todos los escondites de coleccionables se pueden alcanzar y mirar.
 	var coleccionable: Node3D = null
 	for h: Node in mision.get_children():
@@ -301,7 +317,8 @@ func _correr() -> void:
 	revisar("resultado completo tras huir", Juego.resultado == "completo", Juego.resultado)
 	await frames(10)
 	await get_tree().process_frame
-	revisar("carga la escena final", get_tree().current_scene != null and get_tree().current_scene.name == "Final", get_tree().current_scene)
+	# Con todas las obras no va directo al final: en la carretera espera Franchesca.
+	revisar("con todas las obras va a la carretera", get_tree().current_scene != null and get_tree().current_scene.name == "Carretera", get_tree().current_scene)
 	if get_tree().current_scene != null:
 		mision.free()
 		await get_tree().process_frame
@@ -332,9 +349,12 @@ func _correr() -> void:
 		await get_tree().physics_frame
 		espera += 1
 	revisar("el guardia detecta y suena la alarma", Juego.alarma, espera)
-	while Juego.control_bloqueado and espera < 900:
+	# La entrada de Mostro se salta manteniendo ESPACIO.
+	Input.action_press("saltar")
+	while Juego.control_bloqueado and espera < 2400:
 		await get_tree().physics_frame
 		espera += 1
+	Input.action_release("saltar")
 	revisar("control pasa a Mostro", j.personaje == Jugador.Personaje.MOSTRO and not Juego.control_bloqueado)
 	await foto("07_mostro")
 	var g2: Guardia = get_tree().get_nodes_in_group("guardias")[0]

@@ -37,11 +37,21 @@ func _ready() -> void:
 	var jugar := Button.new()
 	jugar.text = "Jugar"
 	jugar.add_theme_font_size_override("font_size", 22)
-	jugar.pressed.connect(func() -> void: get_tree().change_scene_to_file(Juego.ESCENA_MISION))
+	jugar.pressed.connect(_empezar.bind(false))
 	col.add_child(jugar)
+	var explorar := Button.new()
+	explorar.text = "Explorar el museo (sin guardias)"
+	explorar.add_theme_font_size_override("font_size", 22)
+	explorar.pressed.connect(_empezar.bind(true))
+	col.add_child(explorar)
 	var salir := Button.new()
 	salir.text = "Salir"
 	salir.add_theme_font_size_override("font_size", 22)
 	salir.pressed.connect(func() -> void: get_tree().quit())
 	col.add_child(salir)
 	jugar.grab_focus()
+
+
+func _empezar(explorar: bool) -> void:
+	Juego.modo_exploracion = explorar
+	get_tree().change_scene_to_file(Juego.ESCENA_MISION)
