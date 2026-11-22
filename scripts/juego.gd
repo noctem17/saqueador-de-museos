@@ -7,6 +7,8 @@ signal agenda_cambio
 signal bolso_cambio
 signal llaves_cambio
 signal aviso(texto: String)
+signal obra_robada(obra: Dictionary)
+signal polo_atrapado
 signal ruido(posicion: Vector3, radio: float)
 
 const CAPA_MUNDO: int = 1
@@ -119,6 +121,7 @@ func registrar_robo(obra: Dictionary) -> void:
 	agenda_cambio.emit()
 	bolso_cambio.emit()
 	aviso.emit("Tachado de la agenda: %s" % obra["titulo"])
+	obra_robada.emit(obra)
 
 
 func registrar_coleccionable(c: Dictionary) -> void:

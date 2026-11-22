@@ -63,6 +63,18 @@ static func plano(padre: Node, nombre: String, volumen_db: float = 0.0) -> void:
 	p.play()
 
 
+## Música de una sola vez (sin variar el tono, como sí se hace con los efectos).
+## Se pausa con el juego. Devuelve el reproductor.
+static func musica(padre: Node, nombre: String, volumen_db: float = 0.0) -> AudioStreamPlayer:
+	var p := AudioStreamPlayer.new()
+	p.stream = _flujo(nombre)
+	p.volume_db = volumen_db
+	p.finished.connect(p.queue_free)
+	padre.add_child(p)
+	p.play()
+	return p
+
+
 ## Sonido en bucle (alarma, ambiente). Devuelve el reproductor para poder detenerlo.
 static func bucle(padre: Node, nombre: String, volumen_db: float = 0.0) -> AudioStreamPlayer:
 	var p := AudioStreamPlayer.new()

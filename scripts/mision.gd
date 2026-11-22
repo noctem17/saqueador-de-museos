@@ -25,7 +25,17 @@ var _reloj_policia: Timer
 var _terminado: bool = false
 var _camioneta_visual: Node3D
 var _musica_mostro: AudioStreamPlayer   ## AURA, en bucle mientras se juega con Mostro.
+const VOL_FONDO: float = -15.0
+const DIST_CARA: float = 0.95   ## A qué distancia se ponen las cámaras de primer plano.
+const VOL_CONEXION: float = -10.0
+
+var _musica_polo: AudioStreamPlayer     ## Música de fondo mientras se juega con Polo.
+var _musica_conexion: AudioStreamPlayer ## En la sala de la espada y en la del MAMBO.
+var _en_conexion: bool = false
+var _silencio_hasta: float = 0.0        ## Hasta cuándo suena la música de la obra robada.
+var _bajas_mostro: int = 0              ## Guardias que ha tumbado Mostro.
 var espada: Obra                        ## La espada de Bolívar (pieza obligatoria).
+static var sin_elcacas: bool = false    ## Las pruebas se llevan la espada sin pelear.
 var jaula: RelojEspada.Jaula
 var reloj: RelojEspada.Reloj
 const DIST_CINE_ESPADA: float = 8.0
@@ -67,6 +77,8 @@ func _ready() -> void:
 	hud = Hud.new()
 	add_child(hud)
 	hud.conectar_jugador(jugador)
+	_musica_polo = Sfx.bucle(self, "fondo", VOL_FONDO)
+	Juego.obra_robada.connect(_al_robar)
 
 	_reloj_policia = Timer.new()
 	_reloj_policia.wait_time = INTERVALO_POLICIA
@@ -74,6 +86,7 @@ func _ready() -> void:
 	add_child(_reloj_policia)
 
 	Juego.alarma_disparada.connect(_on_alarma)
+	Juego.polo_atrapado.connect(_on_polo_atrapado)
 	jugador.vida_cambio.connect(_on_vida)
 	Juego.agenda_cambio.connect(_revisar_objetivo)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -125,6 +138,48 @@ func _avisar_zona(delta: float) -> void:
 	if zona != "" and zona != _zona_actual:
 		_zona_actual = zona
 		hud.mostrar_aviso(zona)
+		_musica_por_zona(zona)
+
+
+## "conexion" suena en las dos salas que enlazan con los juegos de los otros grupos:
+## el centro del Panóptico (la espada de Bolívar) y la Sala 1 (el cuadro del MAMBO).
+func _musica_por_zona(zona: String) -> void:
+	var dentro: bool = zona.begins_with("Piso 1 · Centro del Panóptico") or zona.begins_with("Piso 1 · Sala 1 ·")
+	if dentro == _en_conexion or Juego.alarma or jugador.personaje != Jugador.Personaje.POLO:
+		return
+	_en_conexion = dentro
+	var tapada: bool = Time.get_ticks_msec() / 1000.0 < _silencio_hasta
+	if dentro:
+		_musica_conexion = Sfx.bucle(self, "conexion", -40.0)
+		if not tapada:
+			_fundir_musica(_musica_conexion, VOL_CONEXION, 2.0)
+		_fundir_musica(_musica_polo, -40.0, 2.0)
+	else:
+		_apagar_musica(_musica_conexion, 2.0)
+		if not tapada:
+			_fundir_musica(_musica_polo, VOL_FONDO, 2.0)
+
+
+## Al robar una obra de la agenda suena su música; la de fondo se baja mientras tanto.
+func _al_robar(obra: Dictionary) -> void:
+	if not Juego.esta_en_lista(obra["id"]) or Juego.alarma:
+		return
+	var musica: AudioStreamPlayer = Sfx.musica(self, "obra_robada", -9.0)
+	_silencio_hasta = Time.get_ticks_msec() / 1000.0 + musica.stream.get_length() - 1.0
+	_fundir_musica(_musica_polo, -40.0, 0.5)
+	_fundir_musica(_musica_conexion, -40.0, 0.5)
+	await get_tree().create_timer(musica.stream.get_length() - 1.0, false).timeout
+	if Time.get_ticks_msec() / 1000.0 < _silencio_hasta - 0.1 or Juego.alarma or _terminado:
+		return   # Otra obra robada mientras tanto, o ya cambió la situación.
+	if _en_conexion:
+		_fundir_musica(_musica_conexion, VOL_CONEXION, 1.5)
+	else:
+		_fundir_musica(_musica_polo, VOL_FONDO, 1.5)
+
+
+func _fundir_musica(m: AudioStreamPlayer, volumen: float, segundos: float) -> void:
+	if m and is_instance_valid(m) and m.playing:
+		create_tween().tween_property(m, "volume_db", volumen, segundos)
 
 
 ## Lo que está en la agenda siempre aparece, pero en un sitio distinto cada partida.
@@ -146,6 +201,9 @@ func _repartir_obras() -> void:
 			e.configurar(info)
 			e.bloqueada = true
 			espada = e
+			# El primer intento de llevársela despierta a Elcacas (jefe_elcacas.gd).
+			e.con_jefe = not sin_elcacas
+			e.intento_robo.connect(_pelea_elcacas)
 			obras.append(e)
 			_anotar_ubicacion(info, e.position)
 		elif info.get("sala_fija", false) and not mapa.slot_especial.is_empty():
@@ -255,6 +313,7 @@ func _crear_guardias() -> void:
 			g.ruta.append(Vector3(punto[0], mapa.base_y(mapa.piso_de(punto, 2)), punto[1]))
 		add_child(g)
 		g.global_position = g.ruta[0]
+		g.murio.connect(_contar_baja)
 
 
 ## Cámara de cine temporal para mostrar a los personajes.
@@ -425,7 +484,7 @@ func _cine_cuadro() -> void:
 	var cabeza: Vector3 = jugador.global_position + Vector3.UP * (Cuerpo.TIPOS["polo"].get("cara", 1.62) as float)
 	var frente: Vector3 = -jugador.global_basis.z
 	var costado: Vector3 = jugador.global_basis.x
-	var cam_polo: Camera3D = _plano(cabeza + frente * 1.75 + costado * 0.45 + Vector3.UP * 0.02, cabeza)
+	var cam_polo: Camera3D = _plano(cabeza + frente * DIST_CARA + costado * 0.25 + Vector3.UP * 0.02, cabeza + Vector3.DOWN * 0.05)
 	cam_polo.fov = 40.0
 	await hud.fundir(0.0, 0.3)
 	await hud.reproducir_llamada([
@@ -487,7 +546,7 @@ func _cine_espada() -> void:
 	var cabeza: Vector3 = jugador.global_position + Vector3.UP * (Cuerpo.TIPOS["polo"].get("cara", 1.62) as float)
 	var frente: Vector3 = -jugador.global_basis.z
 	var costado: Vector3 = jugador.global_basis.x
-	var cam_polo: Camera3D = _plano(cabeza + frente * 1.75 + costado * 0.45 + Vector3.UP * 0.02, cabeza)
+	var cam_polo: Camera3D = _plano(cabeza + frente * DIST_CARA + costado * 0.25 + Vector3.UP * 0.02, cabeza + Vector3.DOWN * 0.05)
 	cam_polo.fov = 40.0
 	await hud.fundir(0.0, 0.3)
 	await hud.reproducir_llamada([
@@ -527,11 +586,51 @@ func _revisar_objetivo() -> void:
 
 
 func _on_alarma(motivo: String) -> void:
+	if motivo == "elcacas":
+		_alarma_huida()
+		return
 	_alarma_en_curso(motivo)
+
+
+## La pelea con Elcacas por la espada. Al final Polo se la lleva y suena la alarma.
+func _pelea_elcacas() -> void:
+	var jefe := JefeElcacas.new()
+	add_child(jefe)
+	await jefe.reproducir(self)
+	jefe.queue_free()
+	jugador.global_position = mapa.pos_espada + JefeElcacas.LADO_POLO
+	jugador.mirar_hacia(mapa.pos_espada + Vector3(10, 0, 0))
+	Juego.disparar_alarma("elcacas")
+	espada.completar(jugador)
+	await hud.fundir(0.0, 0.4)
+
+
+## Después de Elcacas: todos oyeron el escándalo. Polo (sin Mostro) tiene que
+## llegar a la camioneta con la espada antes de que lo alcancen.
+func _alarma_huida() -> void:
+	_encender_luces_alarma()
+	_alarma_sonido = Sfx.bucle(self, "alarma", -16.0)
+	hud.grito("¡ALARMA!", 1.2)
+	hud.mostrar_aviso("Los guardias oyeron todo. ¡Corra a la camioneta con la espada!")
+	Juego.control_bloqueado = false
+	_reloj_policia.start()
+	_revisar_objetivo()
+
+
+func _on_polo_atrapado() -> void:
+	if _terminado:
+		return
+	_terminado = true
+	Juego.control_bloqueado = true
+	await hud.grito("¡LO ATRAPARON!", 1.5)
+	_terminado = false
+	_terminar("fallo")
 
 
 func _alarma_en_curso(motivo: String) -> void:
 	Juego.control_bloqueado = true
+	_apagar_musica(_musica_polo, 1.5)   # Con Mostro suena AURA.
+	_apagar_musica(_musica_conexion, 1.5)
 	_encender_luces_alarma()
 	_alarma_sonido = Sfx.bucle(self, "alarma", -16.0)
 	var pos_polo: Vector3 = jugador.global_position
@@ -597,6 +696,7 @@ func _llegada_policia() -> void:
 	var g := Guardia.new()
 	g.es_policia = true
 	add_child(g)
+	g.murio.connect(_contar_baja)
 	g.global_position = mapa.spawn_policia.pick_random()
 	hud.mostrar_aviso("Llegó la policía")
 
@@ -633,10 +733,26 @@ func _huir() -> void:
 
 
 func _apagar_musica_mostro() -> void:
-	if _musica_mostro and is_instance_valid(_musica_mostro):
+	_apagar_musica(_musica_mostro, 2.5)
+	_apagar_musica(_musica_polo, 2.5)
+	_apagar_musica(_musica_conexion, 2.5)
+
+
+func _apagar_musica(m: AudioStreamPlayer, segundos: float) -> void:
+	if m and is_instance_valid(m) and m.playing:
 		var t := create_tween()
-		t.tween_property(_musica_mostro, "volume_db", -40.0, 2.5)
-		t.tween_callback(_musica_mostro.stop)
+		t.tween_property(m, "volume_db", -40.0, segundos)
+		t.tween_callback(m.stop)
+
+
+## Cada guardia que cae cuenta para Mostro; al segundo, suelta su frase.
+func _contar_baja() -> void:
+	if jugador.personaje != Jugador.Personaje.MOSTRO:
+		return
+	_bajas_mostro += 1
+	if _bajas_mostro == 2:
+		Sfx.plano(self, "patria_milagro", 6.0)
+		hud.reproducir_llamada([{"quien": "MOSTRO", "texto": "¡Bienvenido a la patria milagro!", "dura": 5.0}], true, false)
 
 
 func _terminar(resultado: String) -> void:

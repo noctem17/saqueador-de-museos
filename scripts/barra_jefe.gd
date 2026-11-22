@@ -7,6 +7,10 @@ extends CanvasLayer
 
 const NOMBRE: String = "ELIHCOTERO, la profanadora de becas"
 
+var nombre_jefe: String = NOMBRE
+var texto_ayuda: String = "Clic: disparar  ·  WASD: moverse  ·  Shift: correr  ·  Quítate de los círculos rojos"
+var con_cohete: bool = true
+
 var _raiz: Control
 var _relleno: ColorRect
 var _rastro: ColorRect
@@ -35,7 +39,7 @@ func _ready() -> void:
 	marco.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_raiz.add_child(marco)
 	var nombre := Label.new()
-	nombre.text = NOMBRE
+	nombre.text = nombre_jefe
 	nombre.add_theme_font_size_override("font_size", 20)
 	nombre.add_theme_color_override("font_color", Color("e9e2d0"))
 	nombre.add_theme_color_override("font_outline_color", Color.BLACK)
@@ -73,7 +77,8 @@ func _ready() -> void:
 	# Instrucciones que se borran solas.
 	_ayuda = _etiqueta(Vector2(0.5, 0), Rect2(-420, 84, 840, 30), 18)
 	_ayuda.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_ayuda.text = "Clic: disparar  ·  WASD: moverse  ·  Shift: correr  ·  Quítate de los círculos rojos"
+	_ayuda.text = texto_ayuda
+	_cohete.visible = con_cohete
 	# Aviso de misil: si Polo está mirando al helicóptero no ve los círculos del piso.
 	_alerta = _etiqueta(Vector2(0.5, 0.5), Rect2(-200, 60, 400, 40), 30)
 	_alerta.text = "¡MISIL! ¡MUÉVASE!"

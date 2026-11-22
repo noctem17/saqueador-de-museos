@@ -3,10 +3,9 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://p7govlcchmv4"
-path.s3tc="res://.godot/imported/franchesca_Image_0.jpg-705829bb2eaa432210aedc60f4e4b1cc.s3tc.ctex"
+path="res://.godot/imported/franchesca_Image_0.jpg-705829bb2eaa432210aedc60f4e4b1cc.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
-"vram_texture": true
+"vram_texture": false
 }
 generator_parameters={
 "md5": "b08b7e6557b124b5e900ff885b7078ef"
@@ -15,11 +14,11 @@ generator_parameters={
 [deps]
 
 source_file="res://modelos/franchesca_Image_0.jpg"
-dest_files=["res://.godot/imported/franchesca_Image_0.jpg-705829bb2eaa432210aedc60f4e4b1cc.s3tc.ctex"]
+dest_files=["res://.godot/imported/franchesca_Image_0.jpg-705829bb2eaa432210aedc60f4e4b1cc.ctex"]
 
 [params]
 
-compress/mode=2
+compress/mode=0
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

@@ -4,6 +4,7 @@ extends Control
 
 func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	Sfx.bucle(self, "fondo", -8.0)   # La misma música que suena mientras se juega con Polo.
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	var fondo := ColorRect.new()
 	fondo.color = Color("0b0e16")

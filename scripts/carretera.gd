@@ -188,10 +188,13 @@ func _cinematica() -> void:
 
 	# 5. El grito.
 	var cerca := _plano_cara(franchesca)
+	# Las letras del grito van al centro: la cara sube al tercio de arriba.
+	var ojos: Vector3 = franchesca.global_position + Vector3.UP * (Cuerpo.TIPOS["franchesca"]["cara"] as float)
+	cerca.look_at(ojos + Vector3.DOWN * 0.5)
 	franchesca.una_vez("Punch_Right")
 	relampago(true)
 	_temblor = 1.0
-	create_tween().tween_property(cerca, "fov", 26.0, 0.5).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	create_tween().tween_property(cerca, "fov", 44.0, 0.5).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
 	await hud.grito("¡YO SOY FRANCHESCA MARCOS!\n¡Y NO TE LLEVARÁS TODO LO QUE PROTEJO!", 2.8)
 
 	await _hablar([{"quien": "POLO", "texto": "...Ay, no. Esto no estaba en la agenda."}])
@@ -382,7 +385,7 @@ func _pelea() -> void:
 	polo.rotation.y = 0.0   # De frente al baúl.
 	_camara(trasera + Vector3(2.6, 1.7, 2.6), trasera + Vector3(0, 1.0, -1.0))
 	polo.una_vez("Interact")
-	Sfx.plano(self, "recarga", -2.0)
+	Sfx.plano(self, "recarga_cohete", -2.0)
 	await get_tree().create_timer(1.2).timeout
 	await _hablar([{"quien": "POLO", "texto": "A ver qué dejó Mostro en el baúl... ¿Un lanzacohetes? Obvio. Cómo no."}])
 
@@ -607,7 +610,11 @@ func _plano_cara(c: Cuerpo) -> Camera3D:
 	var frente: Vector3 = -c.global_basis.z
 	var costado: Vector3 = c.global_basis.x
 	var ojos: Vector3 = c.global_position + Vector3.UP * cara
-	var cam := _camara(ojos + frente * 1.75 + costado * 0.45 + Vector3.UP * 0.02, ojos)
+	# Mira un poco más abajo de los ojos: la cara queda en el tercio de arriba,
+	# lejos del cuadro de diálogo.
+	# Las cabezas normales necesitan la cámara cerca; la de Franchesca es enorme.
+	var dist: float = Cuerpo.TIPOS[c.tipo].get("dist_cara", 0.95)
+	var cam := _camara(ojos + frente * dist + costado * dist * 0.26 + Vector3.UP * 0.02, ojos + Vector3.DOWN * 0.05)
 	cam.fov = 40.0
 	return cam
 

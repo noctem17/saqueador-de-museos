@@ -99,6 +99,7 @@ class Terminal:
 	func completar(_j: Jugador) -> void:
 		usada = true
 		Sfx.plano(get_parent(), "consola", -6.0)
+		Sfx.plano(get_parent(), "apagon", -6.0)
 		get_tree().call_group("camaras", "desactivar")
 		Juego.aviso.emit("Cámaras fuera de línea")
 
@@ -139,7 +140,7 @@ class PoloEscondido:
 		agregar_colision(Vector3(1.0, 1.3, 1.0), Vector3(0, 0.65, 0))
 		var cuerpo: Cuerpo = Cuerpo.crear("polo")
 		add_child(cuerpo)
-		cuerpo.agachar()
+		cuerpo.esconderse()
 
 	func prompt(_j: Jugador) -> String:
 		return "[F] Sacar a Polo"

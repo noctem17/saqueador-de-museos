@@ -98,7 +98,7 @@ func disparar() -> void:
 	var t := create_tween()
 	t.tween_property(self, "position", POS_LISTO + Vector3(0, 0.03, 0.12), 0.05)
 	t.tween_property(self, "position", POS_LISTO + Vector3(0, -0.45, 0.1), 0.35)
-	t.tween_callback(func() -> void: Sfx.plano(self, "recarga", -4.0))
+	t.tween_callback(func() -> void: Sfx.plano(self, "recarga_cohete", -4.0))
 	t.tween_interval(RECARGA - 0.6)
 	t.tween_callback(_ojiva.show)
 	t.tween_property(self, "position", POS_LISTO, 0.25)

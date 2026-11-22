@@ -25,6 +25,8 @@ const SENSIBILIDAD: float = 0.0025
 
 var personaje: Personaje = Personaje.POLO
 var polo_rescatado: bool = false
+## En el duelo con Elcacas: no camina ni salta ni usa cosas; solo se asoma con Q/E.
+var en_duelo: bool = false
 var cargar_peso: bool = true   ## Las obras del bolso lo hacen más lento (en la pelea final, no).
 var agachado: bool = false
 ## Afuera de la muralla Polo es un peatón más: ni lo ven ni lo oyen. La misión lo actualiza.
@@ -156,7 +158,7 @@ func recargando() -> bool:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if Juego.control_bloqueado or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+	if Juego.control_bloqueado or en_duelo or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		return
 	if event is InputEventMouseMotion:
 		var movimiento := event as InputEventMouseMotion
@@ -166,10 +168,10 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _physics_process(delta: float) -> void:
 	var bloqueado: bool = Juego.control_bloqueado
-	_mover(delta, bloqueado)
-	_agacharse(delta, bloqueado)
+	_mover(delta, bloqueado or en_duelo)
+	_agacharse(delta, bloqueado or en_duelo)
 	_asomarse(delta, bloqueado)
-	_interactuar(delta, bloqueado)
+	_interactuar(delta, bloqueado or en_duelo)
 	if personaje == Personaje.MOSTRO and not bloqueado:
 		_arma_logica(delta)
 	_destello.light_energy = move_toward(_destello.light_energy, 0.0, delta * 40.0)
@@ -240,6 +242,11 @@ func _asomarse(delta: float, bloqueado: bool) -> void:
 	_asomar = move_toward(_asomar, meta, delta * 3.2)
 	_pivote.position.x = _asomar
 	_pivote.rotation.z = -_asomar / ASOMAR_DIST * ASOMAR_GIRO
+
+
+## Cuánto está asomado: -1 todo a la izquierda (Q), 1 todo a la derecha (E).
+func asomado() -> float:
+	return _asomar / ASOMAR_DIST
 
 
 ## La cabeza no atraviesa muros al asomarse: se detiene antes.

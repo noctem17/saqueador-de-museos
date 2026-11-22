@@ -48,6 +48,7 @@ func nueva() -> void:
 		mision.free()
 		await get_tree().process_frame
 	Mision.saltar_intro = true
+	Mision.sin_elcacas = true
 	mision = Mision.new()
 	get_tree().root.add_child(mision)
 	await frames(10)
@@ -99,6 +100,7 @@ func pulsar_continuar() -> void:
 
 func medir_fps() -> void:
 	Mision.saltar_intro = true
+	Mision.sin_elcacas = true
 	mision = Mision.new()
 	get_tree().root.add_child(mision)
 	await get_tree().create_timer(6.0).timeout
@@ -263,6 +265,7 @@ func _correr() -> void:
 		await frames(2)
 		revisar("robó %s" % info["id"], obra.robada)
 		if Juego.robadas.size() == 1:
+			revisar("al robar suena la música de la obra", mision._silencio_hasta > Time.get_ticks_msec() / 1000.0)
 			await foto("03_marco_vacio")
 	revisar("agenda tachada", Juego.faltantes() == 0)
 
@@ -305,9 +308,20 @@ func _correr() -> void:
 	mision.hud.alternar_pantalla()
 	mision.hud._leer_item(0)
 	revisar("la pantalla de agenda pausa el juego", get_tree().paused)
+	var musica_bolso: AudioStreamPlayer = mision.hud._musica_bolso
+	revisar("con el bolso abierto suena su música", musica_bolso != null and musica_bolso.playing and musica_bolso.stream != null)
 	await foto_pausada("04_agenda_bolso")
 	mision.hud.alternar_pantalla()
 	revisar("cerrar reanuda", not get_tree().paused)
+	revisar("al cerrar se calla", mision.hud._musica_bolso == null)
+
+	# Música: "conexion" en la sala de la espada, y vuelve la de fondo al salir.
+	mision._musica_por_zona("Piso 1 · Centro del Panóptico")
+	revisar("en la sala de la espada suena conexion", mision._en_conexion and mision._musica_conexion.playing and mision._musica_conexion.stream != null)
+	mision._musica_por_zona("Piso 1 · Sala 1 · La historia del museo (cerrada por montaje)")
+	revisar("en la sala del MAMBO también", mision._en_conexion)
+	mision._musica_por_zona("Piso 2 · Sala 8")
+	revisar("al salir se apaga", not mision._en_conexion)
 
 	# Camioneta: gana.
 	j.global_position = mision.mapa.pos_camioneta + Vector3(0, 0.1, 2.1)

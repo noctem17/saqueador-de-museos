@@ -181,7 +181,7 @@ class Reloj:
 				_acumulado -= 1.0
 				minutos += int(signf(dir))
 				if posmod(minutos, 5) == 0:
-					Sfx.plano(self, "recarga", -24.0)
+					Sfx.plano(self, "tic", -16.0)
 			_mostrar_hora()
 		else:
 			_sostenido = 0.0
@@ -301,7 +301,7 @@ class Jaula:
 			return
 		_abierta = true
 		_solido.set_deferred("disabled", true)
-		Sfx.plano(get_parent(), "consola", -6.0)
+		Sfx.plano(get_parent(), "mecanismo", -4.0)
 		var t := create_tween()
 		t.tween_property(self, "position:y", position.y + 7.0, 3.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 		t.tween_callback(hide)

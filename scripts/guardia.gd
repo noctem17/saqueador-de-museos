@@ -5,6 +5,8 @@ extends CharacterBody3D
 
 enum Estado { PATRULLA, INVESTIGAR, ALERTA, MUERTO }
 
+signal murio
+
 const VEL_PATRULLA: float = 1.5
 const VEL_INVESTIGAR: float = 2.2
 const VEL_ALERTA: float = 3.6
@@ -152,6 +154,7 @@ func recibir_dano(cantidad: int, punto: Vector3, direccion: Vector3) -> void:
 	_icono.text = ""
 	remove_from_group("guardias")
 	_cuerpo.morir()
+	murio.emit()
 	Efectos.charco(get_parent(), global_position)
 
 
@@ -171,6 +174,7 @@ func _detectar(delta: float) -> void:
 		sospecha += Vision.ritmo(distancia, alcance) * delta
 		Juego.sospecha = maxf(Juego.sospecha, sospecha)
 		if sospecha >= 1.0:
+			Sfx.en(self, "radio", global_position, -2.0, 30.0)
 			Juego.disparar_alarma("guardia")
 			return
 		if sospecha > 0.45 and estado != Estado.INVESTIGAR:
@@ -253,6 +257,10 @@ func _alerta(delta: float) -> void:
 		if _enfriar_tiro <= 0.0:
 			_enfriar_tiro = randf_range(0.9, 1.6)
 			_disparar(a_jugador.length())
+		return
+	# Polo no pelea: si lo alcanzan, lo atrapan (la huida después de Elcacas).
+	if _jugador.personaje == Jugador.Personaje.POLO and a_jugador.length() < 1.3:
+		Juego.polo_atrapado.emit()
 		return
 	_ir_a(_jugador.global_position)
 	_avanzar(VEL_ALERTA, delta, "Run_Shoot" if _armado else "Run")

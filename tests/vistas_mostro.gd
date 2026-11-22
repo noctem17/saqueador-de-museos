@@ -19,7 +19,8 @@ func _ready() -> void:
 	for i: int in 80:
 		await get_tree().create_timer(0.5).timeout
 		var m: AudioStreamPlayer = mision.get("_musica_mostro")
-		print("mostro_%02d  FPS %d  bloqueado %s" % [i, Engine.get_frames_per_second(), Juego.control_bloqueado])
+		var mp: AudioStreamPlayer = mision.get("_musica_polo")
+		print("mostro_%02d  FPS %d  bloqueado %s  musica_polo %s" % [i, Engine.get_frames_per_second(), Juego.control_bloqueado, mp != null and mp.playing])
 		get_viewport().get_texture().get_image().save_png("res://capturas/mostro_%02d.png" % i)
 		if not Juego.control_bloqueado and i > 4:
 			print("FIN: control para Mostro; música sonando: ", m != null and m.playing)

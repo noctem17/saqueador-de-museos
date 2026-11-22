@@ -10,6 +10,7 @@ var jugador: Jugador
 
 var _objetivo: Label
 var _agenda_mini: RichTextLabel
+var _musica_bolso: AudioStreamPlayer
 var _prompt: Label
 var _barra_uso: ProgressBar
 var _punto: Label
@@ -337,6 +338,18 @@ func alternar_pantalla() -> void:
 	_refrescar_agenda()
 	_refrescar_bolso()
 	_aplicar_pausa(_pantalla.visible)
+	_musica_del_bolso(_pantalla.visible)
+
+
+## Con la agenda y el bolso abiertos suena su propia música (la del juego queda en
+## pausa, como todo lo demás).
+func _musica_del_bolso(abierto: bool) -> void:
+	if _musica_bolso and is_instance_valid(_musica_bolso):
+		_musica_bolso.queue_free()
+		_musica_bolso = null
+	if abierto:
+		_musica_bolso = Sfx.bucle(self, "bolso", -8.0)
+		_musica_bolso.process_mode = Node.PROCESS_MODE_ALWAYS
 
 
 func alternar_pausa() -> void:

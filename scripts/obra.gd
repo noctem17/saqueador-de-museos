@@ -14,6 +14,12 @@ var robada: bool = false
 var bloqueada: bool = false   ## La espada, mientras su jaula esté cerrada.
 var _contenido: Node3D
 var _placa: Label3D
+var _con_vitrina: bool = false
+## Si está activo, el primer intento de llevársela no la roba: avisa con
+## intento_robo (la espada de Bolívar: ahí aparece Elcacas).
+var con_jefe: bool = false
+
+signal intento_robo
 
 
 func configurar(info: Dictionary) -> void:
@@ -50,15 +56,26 @@ func prompt(_j: Jugador) -> String:
 
 
 func completar(_j: Jugador) -> void:
+	if con_jefe:
+		con_jefe = false
+		intento_robo.emit()
+		return
 	robada = true
 	_contenido.visible = false
 	Sfx.plano(get_parent(), "descolgar", -5.0)
+	if _con_vitrina:
+		Sfx.en(get_parent(), "cristal", global_position + Vector3.UP * 0.5, -3.0, 25.0)
 	_placa.text = "ESTA OBRA YA NO\nPUEDE SER VISTA"
 	_placa.modulate = Color(0.75, 0.1, 0.08)
 	for hijo: Node in get_children():
 		if hijo is CollisionShape3D:
 			(hijo as CollisionShape3D).set_deferred("disabled", true)
 	Juego.registrar_robo(datos)
+
+
+## Esconde la pieza sin robarla (Elcacas la toma de su pedestal).
+func ocultar_pieza() -> void:
+	_contenido.visible = false
 
 
 func _ficha_corta() -> String:
@@ -129,6 +146,7 @@ func _armar_pieza(tipo: String) -> void:
 				_escultura()
 	if vitrina != Vector3.ZERO:
 		_vitrina(vitrina)
+		_con_vitrina = true
 	var alto: float = maxf(vitrina.y, (datos["tam"] as Vector2).y)
 	if modelo == "espada":
 		# Más grande que el bloque sólido que rodea el pedestal: así el rayo de

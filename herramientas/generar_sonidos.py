@@ -13,8 +13,16 @@ DESTINO = Path("audio")
 random.seed(7)
 
 
+# Ya los reemplazó el equipo con grabaciones (ver herramientas/preparar_audios.py):
+# no se vuelven a generar para no borrarlos.
+DEL_EQUIPO = {"recarga", "misil", "helicoptero", "frenazo"}
+
+
 def guardar(nombre, muestras, pico_final=0.9):
     """pico_final: qué tan fuerte queda el archivo (0.9 = casi al máximo)."""
+    if nombre in DEL_EQUIPO:
+        print("se deja el del equipo:", nombre)
+        return
     pico = max(0.001, max(abs(m) for m in muestras))
     datos = b"".join(struct.pack("<h", int(max(-1, min(1, m / pico * pico_final)) * 32000)) for m in muestras)
     with wave.open(str(DESTINO / f"{nombre}.wav"), "wb") as w:
@@ -60,6 +68,11 @@ def clic(t_ini, total, f=2400):
         if i >= t_ini else 0.0
         for i in range(total)
     ]
+
+
+def tic():
+    """Tic de reloj de pie: un clic seco y corto, con un eco de madera."""
+    return mezclar(clic(n(0.0), n(0.12), 1800), [x * 0.35 for x in clic(n(0.03), n(0.12), 700)])
 
 
 def mezclar(*pistas):
@@ -230,6 +243,7 @@ def principal():
         filtro([ruido() * 0.5 * math.sin(math.pi * i / n(0.5)) for i in range(n(0.5))], 0.15),
         filtro([ruido() * math.exp(-max(0, i - n(0.45)) / (TASA * 0.05)) * (1 if i > n(0.45) else 0) for i in range(n(0.7))], 0.1),
     ))
+    guardar("tic", tic(), 0.7)
     guardar("consola", [seno(f, i / TASA) * 0.6 for f, dur in ((900, 0.09), (1300, 0.09), (700, 0.2)) for i in range(n(dur))])
     guardar("alerta", [seno(1400, i / TASA) * (0.5 + 0.5 * seno(14, i / TASA)) * math.exp(-i / (TASA * 0.3)) for i in range(n(0.5))])
 
