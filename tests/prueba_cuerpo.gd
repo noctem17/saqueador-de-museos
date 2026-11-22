@@ -174,7 +174,8 @@ func _correr() -> void:
 	var lista_b: Array = Juego.lista.map(func(o: Dictionary) -> String: return o["id"])
 	var pos_b: Vector3 = mision.obras[0].global_position
 	revisar("agenda de %d piezas" % Juego.OBRAS_POR_MISION, lista_b.size() == Juego.OBRAS_POR_MISION, lista_b)
-	revisar("siempre está el cuadro del MAMBO", "cuadro_enlace" in lista_b, lista_b)
+	revisar("siempre está la espada de Bolívar", "espada_bolivar" in lista_b, lista_b)
+	revisar("el cuadro del MAMBO ya no es obligatorio", not "cuadro_enlace" in lista_b, lista_b)
 	revisar("siempre está la pieza del Museo del Oro", "poporo_quimbaya" in lista_b, lista_b)
 	revisar("agenda sin repetidas", lista_b.size() == Juego.lista.map(func(o: Dictionary) -> String: return o["id"]).reduce(func(acc: Array, x: String) -> Array: return acc if x in acc else acc + [x], []).size())
 	revisar("agenda o sitios cambian entre partidas", lista_a != lista_b or pos_a != pos_b)
@@ -243,6 +244,13 @@ func _correr() -> void:
 			j.global_position = centro + frente * 1.3
 			await frames(3)
 			mirar(j, obra.global_position + frente * 0.07)
+		elif info["id"] == "espada_bolivar":
+			# La espada está en su jaula: el reloj la abre solo a las 3:19.
+			revisar("la espada empieza encerrada", not obra.disponible(j))
+			revisar("una hora equivocada no abre", not mision.reloj.probar_hora(8 * 60))
+			revisar("a las 3:19 abre la jaula", mision.reloj.probar_hora(3 * 60 + 19) and obra.disponible(j))
+			await frames(5)
+			await _acercarse(j, obra, 0.3, [1.7, 1.9])
 		else:
 			await _acercarse(j, obra, 0.3, [1.3, 1.0])
 		await frames(3)

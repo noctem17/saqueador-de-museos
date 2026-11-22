@@ -21,7 +21,9 @@ var slots_pared: Array = []          # Cuadros: [x, z, giro, piso]. El giro apun
 var slots_pedestal: Array = []       # Esculturas: [x, z, piso]
 var slot_especial: Array = []        # Sitio fijo del cuadro del MAMBO: [x, z, giro, piso]
 var pos_candado: Vector3 = Vector3.INF   # Reja con candado de la sala del cuadro (INF = no hay).
-var sitios_llaves: Dictionary = {}       # id de llave -> [posición, escondite]
+var sitios_llaves: Dictionary = {}
+var pos_espada := Vector3.INF       # Centro de la jaula de la espada de Bolívar.
+var pos_reloj := Vector3.INF        # Reloj que abre la jaula (la carátula mira a +Z).       # id de llave -> [posición, escondite]
 var slots_coleccionable: Array = []  # Monedas y billetes: [x, y, z] (y absoluta)
 var camaras: Array = []              # [x, y, z, giro base]
 var patrullas: Array = []            # Rutas de guardias: listas de [x, z, piso]

@@ -11,6 +11,7 @@ const COLOR_PEDESTAL := Color("efeae0")
 
 var datos: Dictionary = {}
 var robada: bool = false
+var bloqueada: bool = false   ## La espada, mientras su jaula esté cerrada.
 var _contenido: Node3D
 var _placa: Label3D
 
@@ -28,14 +29,23 @@ func configurar(info: Dictionary) -> void:
 
 
 func disponible(_j: Jugador) -> bool:
-	return not robada and Juego.esta_en_lista(datos["id"])
+	return not robada and not bloqueada and _se_puede_llevar()
+
+
+## Lo de la agenda, y los extras opcionales (el cuadro del MAMBO).
+func _se_puede_llevar() -> bool:
+	return Juego.esta_en_lista(datos["id"]) or datos.get("opcional", false)
 
 
 func prompt(_j: Jugador) -> String:
 	if robada:
 		return ""
+	if bloqueada:
+		return "%s. Encerrada en la jaula: la abre el reloj." % _ficha_corta()
 	if Juego.esta_en_lista(datos["id"]):
 		return "[F] Llevarse «%s»" % datos["titulo"]
+	if datos.get("opcional", false):
+		return "[F] Llevarse «%s» (extra, no está en la agenda)" % datos["titulo"]
 	return "%s. No está en la agenda." % _ficha_corta()
 
 
@@ -92,8 +102,8 @@ func _armar_cuadro() -> void:
 ## El origen es la cara de arriba del pedestal. La vitrina y el pedestal quedan
 ## aunque la pieza se la lleven.
 func _armar_pieza(tipo: String) -> void:
-	_pedestal()
 	var modelo: String = datos.get("modelo", "")
+	_pedestal(Vector3(1.4, 1.0, 0.7) if modelo == "espada" else Vector3(0.7, 1.0, 0.7))
 	var vitrina := Vector3.ZERO   # Tamaño de la urna de vidrio; cero = sin vitrina.
 	match modelo:
 		"custodia":
@@ -111,28 +121,36 @@ func _armar_pieza(tipo: String) -> void:
 		"documento":
 			_documento()
 			vitrina = Vector3(0.6, 0.26, 0.5)
+		"espada":
+			_espada()
+			vitrina = Vector3(1.3, 0.3, 0.55)
 		_:
 			if tipo == "escultura":
 				_escultura()
 	if vitrina != Vector3.ZERO:
 		_vitrina(vitrina)
 	var alto: float = maxf(vitrina.y, (datos["tam"] as Vector2).y)
-	agregar_colision(Vector3(0.7, alto, 0.7), Vector3(0, alto * 0.5, 0))
+	if modelo == "espada":
+		# Más grande que el bloque sólido que rodea el pedestal: así el rayo de
+		# "usar" encuentra primero la espada (ver mapa_museo_nacional.gd).
+		agregar_colision(Vector3(2.3, 1.6, 2.3), Vector3(0, 0.0, 0))
+	else:
+		agregar_colision(Vector3(0.7, alto, 0.7), Vector3(0, alto * 0.5, 0))
 	_crear_placa(Vector3(0, -0.28, 0.36))
 
 
-func _pedestal() -> void:
+func _pedestal(tam: Vector3 = Vector3(0.7, 1.0, 0.7)) -> void:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = COLOR_PEDESTAL
 	mat.roughness = 0.85
-	_malla(_caja(Vector3(0.7, 1.0, 0.7)), Vector3(0, -0.5, 0), Vector3.ZERO, mat, self)
+	_malla(_caja(tam), Vector3(0, -0.5, 0), Vector3.ZERO, mat, self)
 	# Cuerpo sólido aparte: el jugador y los guardias no atraviesan el pedestal.
 	var solido := StaticBody3D.new()
 	solido.collision_layer = Juego.CAPA_MUNDO
 	solido.collision_mask = 0
 	var col := CollisionShape3D.new()
 	var forma := BoxShape3D.new()
-	forma.size = Vector3(0.7, 1.0, 0.7)
+	forma.size = tam
 	col.shape = forma
 	col.position.y = -0.5
 	solido.add_child(col)
@@ -147,6 +165,34 @@ func _vitrina(tam: Vector3) -> void:
 	vidrio.metallic_specular = 1.0
 	vidrio.cull_mode = BaseMaterial3D.CULL_DISABLED
 	_malla(_caja(tam), Vector3(0, tam.y * 0.5 + 0.002, 0), Vector3.ZERO, vidrio, self)
+
+
+## Espada de Bolívar acostada sobre un cojín de terciopelo: hoja, guarda y empuñadura
+## doradas, y la vaina al lado.
+func _espada() -> void:
+	var terciopelo := StandardMaterial3D.new()
+	terciopelo.albedo_color = Color("5a1218")
+	terciopelo.roughness = 1.0
+	_malla(_caja(Vector3(1.2, 0.06, 0.45)), Vector3(0, 0.03, 0), Vector3.ZERO, terciopelo, _contenido)
+	var acero := _metal(Color("c8ccd2"), 0.15)
+	var oro := _metal(Color("d4a73a"), 0.3, 0.35)
+	var cuero := StandardMaterial3D.new()
+	cuero.albedo_color = Color("2a1a12")
+	cuero.roughness = 0.7
+	var y: float = 0.085
+	# Hoja, levemente curva: dos tramos.
+	_malla(_caja(Vector3(0.5, 0.008, 0.032)), Vector3(-0.05, y, 0.06), Vector3(0, 0.02, 0), acero, _contenido)
+	_malla(_caja(Vector3(0.36, 0.008, 0.028)), Vector3(-0.47, y, 0.072), Vector3(0, 0.08, 0), acero, _contenido)
+	# Guarda, empuñadura y pomo.
+	_malla(_caja(Vector3(0.025, 0.02, 0.16)), Vector3(0.21, y, 0.06), Vector3.ZERO, oro, _contenido)
+	_malla(_caja(Vector3(0.13, 0.028, 0.03)), Vector3(0.29, y, 0.06), Vector3.ZERO, oro, _contenido)
+	_malla(_esfera(0.022), Vector3(0.37, y, 0.06), Vector3.ZERO, oro, _contenido)
+	# Arco de la guarda que protege la mano.
+	_malla(_caja(Vector3(0.16, 0.012, 0.012)), Vector3(0.29, y, 0.1), Vector3.ZERO, oro, _contenido)
+	# Vaina al lado.
+	_malla(_caja(Vector3(0.82, 0.026, 0.045)), Vector3(-0.2, y, -0.1), Vector3(0, 0.04, 0), cuero, _contenido)
+	_malla(_caja(Vector3(0.08, 0.03, 0.05)), Vector3(0.18, y, -0.098), Vector3.ZERO, oro, _contenido)
+	_malla(_caja(Vector3(0.07, 0.03, 0.05)), Vector3(-0.59, y, -0.13), Vector3.ZERO, oro, _contenido)
 
 
 ## Custodia de La Lechuga: pie, vara y sol de oro con esmeraldas.

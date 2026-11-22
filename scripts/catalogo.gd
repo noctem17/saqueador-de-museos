@@ -12,7 +12,7 @@ extends RefCounted
 
 ## Secciones de la agenda, en este orden.
 const MUSEOS: Array[Dictionary] = [
-	{"id": "especial", "nombre": "Encargo principal", "placa": "Préstamo especial del MAMBO"},
+	{"id": "especial", "nombre": "Encargo principal", "placa": "Préstamo especial · Casa Museo Quinta de Bolívar"},
 	{"id": "urrutia", "nombre": "Miguel Urrutia (en préstamo)", "placa": "En préstamo · Museo de Arte Miguel Urrutia"},
 	{"id": "nacional", "nombre": "Museo Nacional", "placa": ""},
 	{"id": "oro", "nombre": "Museo del Oro (en préstamo)", "placa": "En préstamo · Museo del Oro"},
@@ -76,12 +76,23 @@ const OBRAS: Array[Dictionary] = [
 		"texto": "Custodia de la iglesia de San Ignacio de Bogotá, en oro con 1.485 esmeraldas, además de rubíes, diamantes, perlas y amatistas. Los jesuitas la vendieron al Banco de la República en los años ochenta: las fuentes dan 1985 o 1987. En 2015 salió de Colombia por primera vez para exhibirse en el Prado.",
 	},
 	# ------------------------------------------------ Encargo principal
+	# La espada siempre está en la lista; va en el centro del Panóptico, en una
+	# jaula que abre con el reloj (reloj_espada.gd).
 	{
-		"id": "cuadro_enlace", "museo": "especial", "fija": true, "sala_fija": true,
+		"id": "espada_bolivar", "museo": "especial", "fija": true, "centro": true,
+		"titulo": "Espada de Simón Bolívar", "autor": "Atribuida al Libertador", "anio": "",
+		"tipo": "objeto", "modelo": "espada", "tam": Vector2(1.2, 0.4),
+		"razon": "La Quinta de Bolívar la prestó por una noche, con papelito firmado y todo. Yo también firmo papelitos.",
+		"texto": "Espada atribuida a Simón Bolívar, guardada en la Casa Museo Quinta de Bolívar, en Bogotá. El 17 de enero de 1974 el M-19 se la llevó de la Quinta con la consigna de que la espada volvía a la lucha. La devolvió el 31 de enero de 1991, como parte de los acuerdos de paz, y quedó bajo custodia del Banco de la República. Desde entonces es un símbolo que cada quien saca a pasear según le convenga.",
+	},
+	# El cuadro del MAMBO ya no es obligatorio: es un extra de la Sala 1 (candado de
+	# tres llaves). Se puede llevar aunque no esté en la agenda.
+	{
+		"id": "cuadro_enlace", "museo": "especial", "opcional": true, "sala_fija": true,
 		"titulo": "Cuadro del MAMBO (PENDIENTE)", "autor": "PENDIENTE", "anio": "",
 		"tipo": "pintura", "tam": Vector2(1.2, 1.2),
 		"paleta": ["#4b3b2a", "#8f7a55", "#2e4a3f"],
-		"razon": "Ese cuadro ha pasado por más museos que usted por colegios. Esta noche se jubila en mi sala.",
+		"razon": "No está en la lista, pero si me lo trae le doy propina. En especie.",
 		"texto": "Cuadro ficticio que enlaza este juego con el de otro equipo, ambientado en el museo geológico. Pasó por varios museos, entre ellos el MAMBO, cuyas directivas lo prestaron al Museo Nacional por un solo día. Título, autor e historia completa: PENDIENTE.",
 	},
 	# ------------------------------------------------ Museo Nacional

@@ -37,7 +37,8 @@ var resultado: String = ""          ## "completo", "parcial" o "fallo".
 var modo_exploracion: bool = false
 var llaves: Array[String] = []      ## Llaves del candado de la Sala 1 que ya tiene Polo.
 var mostro_presentado: bool = false ## Ya se vio la entrada completa de Mostro (las siguientes son cortas).
-var cine_cuadro_visto: bool = false ## Ya vio la escena del cuadro del MAMBO (y sabe de las llaves).
+var cine_cuadro_visto: bool = false
+var cine_espada_visto: bool = false ## Ya vio la escena de la espada (y sabe del reloj). ## Ya vio la escena del cuadro del MAMBO (y sabe de las llaves).
 var tiempo_mision: float = 0.0
 var ubicaciones: Dictionary[String, String] = {}   ## id de obra -> "Piso 2 · Sala 8 ..."
 
@@ -73,7 +74,7 @@ func _registrar_controles() -> void:
 ## Urrutia y del Nacional. La agenda queda ordenada por museo, como sus secciones.
 func nueva_mision() -> void:
 	lista = Catalogo.OBRAS.filter(func(o: Dictionary) -> bool: return o.get("fija", false))
-	var resto: Array[Dictionary] = Catalogo.OBRAS.filter(func(o: Dictionary) -> bool: return not o.get("fija", false))
+	var resto: Array[Dictionary] = Catalogo.OBRAS.filter(func(o: Dictionary) -> bool: return not o.get("fija", false) and not o.get("opcional", false))
 	resto.shuffle()
 	for museo: String in ["urrutia", "nacional"]:
 		var del_museo: Array[Dictionary] = resto.filter(func(o: Dictionary) -> bool: return o["museo"] == museo)
@@ -86,6 +87,7 @@ func nueva_mision() -> void:
 	anotadas = 0
 	llaves = []
 	cine_cuadro_visto = false
+	cine_espada_visto = false
 	robadas = []
 	bolso = []
 	alarma = false
@@ -100,8 +102,9 @@ func esta_en_lista(id: String) -> bool:
 	return lista.any(func(o: Dictionary) -> bool: return o["id"] == id)
 
 
+## Piezas de la agenda que faltan (los extras, como el cuadro del MAMBO, no cuentan).
 func faltantes() -> int:
-	return lista.size() - robadas.size()
+	return lista.filter(func(o: Dictionary) -> bool: return not o["id"] in robadas).size()
 
 
 func registrar_robo(obra: Dictionary) -> void:

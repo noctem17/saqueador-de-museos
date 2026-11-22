@@ -355,9 +355,11 @@ func _centro() -> void:
 					[Vector3(2.5, y0, 2.5), Vector3(-2.5, y0, 2.5)], [Vector3(-2.5, y0, 2.5), Vector3(-2.5, y0, -2.5)]]:
 				baranda(lado[0], lado[1], hierro, 1.0, 0.14)
 	_losa_octogono(Y_TECHO, estuco)
-	# Planta baja: mesa del vigilante bajo el pozo de luz.
+	# Planta baja, al fondo del pozo de luz: la espada de Bolívar en su jaula
+	# (la arma mision.gd). Aquí solo la alfombra y un bloque sólido del tamaño del
+	# pedestal, alto para que la malla de navegación no lo tome por rampa.
 	cilindro(2.6, 0.02, Vector3(0, 0.03, 0), Color("6e2a22"), 24, false)
-	cilindro(1.4, 1.05, Vector3.ZERO, Color("3d2b1c"), 16)
+	caja_t(Vector3(2.0, 1.3, 2.0), Transform3D(Basis(), Vector3(0, 0.65, 0)), null, true)
 	# Bancas de la Rotonda (sala 14).
 	banca(5.6, 0.0, 90.0, 2 * H)
 	banca(-5.6, 0.0, 90.0, 2 * H)
@@ -805,6 +807,9 @@ func _datos() -> void:
 
 	# Reja con candado en la puerta de la Sala 1 y sus tres llaves, siempre en el mismo sitio.
 	pos_candado = Vector3(-12.0, 0.0, 29.0)
+	# La espada, al fondo del pozo de luz; el reloj, frente a ella hacia la escalera.
+	pos_espada = Vector3(0.0, 0.0, 0.0)
+	pos_reloj = Vector3(2.8, 0.0, 2.6)
 	sitios_llaves = {
 		"corazon": [Vector3(-34.0, 0.53, 14.0), "agua"],       # En el agua de la fuente del patio.
 		"estrella": [Vector3(25.2, 0.55, 23.22), "cajon"],     # Cajón del escritorio de vigilancia.
@@ -832,7 +837,7 @@ func _datos() -> void:
 		[20.0, H + 0.47, 25.0],                       # Banca de la sala 7.
 		[0.0, 2 * H + 0.47, 32.5],                    # Banca de la exposición temporal.
 		[20.0, 0.62, 39.5],                           # Banca del prado.
-		[0.9, 1.06, 0.0],                             # Mesa del vigilante.
+		[-5.6, 2 * H + 0.47, 0.0],                    # Otra banca de la Rotonda.
 	]
 
 	camaras = [

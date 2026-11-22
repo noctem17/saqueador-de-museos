@@ -25,6 +25,10 @@ var _reloj_policia: Timer
 var _terminado: bool = false
 var _camioneta_visual: Node3D
 var _musica_mostro: AudioStreamPlayer   ## AURA, en bucle mientras se juega con Mostro.
+var espada: Obra                        ## La espada de Bolívar (pieza obligatoria).
+var jaula: RelojEspada.Jaula
+var reloj: RelojEspada.Reloj
+const DIST_CINE_ESPADA: float = 8.0
 var _ambiente: AudioStreamPlayer
 var _alarma_sonido: AudioStreamPlayer
 var _zona_actual: String = ""
@@ -53,6 +57,7 @@ func _ready() -> void:
 	_repartir_coleccionables()
 	_crear_terminal()
 	_crear_candado_y_llaves()
+	_crear_reloj_y_jaula()
 	_crear_camioneta()
 	camioneta.escapar.connect(_huir)
 	if not Juego.modo_exploracion:
@@ -91,6 +96,7 @@ func _process(delta: float) -> void:
 	jugador.dentro = mapa.es_interior(jugador.global_position)
 	_revisar_penumbra(delta)
 	_revisar_cine_cuadro()
+	_revisar_cine_espada()
 	if not Juego.control_bloqueado and not _terminado:
 		Juego.tiempo_mision += delta
 		_avisar_zona(delta)
@@ -132,8 +138,18 @@ func _repartir_obras() -> void:
 	var indice_pared: int = 0
 	var indice_ped: int = 0
 	for info: Dictionary in Catalogo.OBRAS:
-		if info.get("sala_fija", false) and not mapa.slot_especial.is_empty():
-			_colocar_cuadro(info, mapa.slot_especial)   # El cuadro del MAMBO: siempre en su sala.
+		if info.get("centro", false) and mapa.pos_espada != Vector3.INF:
+			# La espada de Bolívar: en el centro del Panóptico, encerrada en su jaula.
+			var e := Obra.new()
+			add_child(e)
+			e.position = mapa.pos_espada + Vector3.UP * 1.0
+			e.configurar(info)
+			e.bloqueada = true
+			espada = e
+			obras.append(e)
+			_anotar_ubicacion(info, e.position)
+		elif info.get("sala_fija", false) and not mapa.slot_especial.is_empty():
+			_colocar_cuadro(info, mapa.slot_especial)   # El cuadro del MAMBO: extra, en su sala.
 		elif info["tipo"] == "pintura":
 			_colocar_cuadro(info, paredes[indice_pared])
 			indice_pared += 1
@@ -308,7 +324,7 @@ func _introduccion() -> void:
 func _intro_seccion(museo: String) -> String:
 	match museo:
 		"especial":
-			return "Lo primero, y lo que más me importa: el cuadro que el MAMBO prestó por un día. Lo tienen en la Sala 1, la que está cerrada por montaje."
+			return "Lo primero, y lo que más me importa: la espada de Bolívar. La Casa Museo Quinta de Bolívar se la prestó al Nacional por una noche. Por una noche. Está en el centro del Panóptico, encerrada en una jaula."
 		"urrutia":
 			return "Del Miguel Urrutia, anote:"
 		"nacional":
@@ -316,6 +332,37 @@ func _intro_seccion(museo: String) -> String:
 		"oro":
 			return "Y del Museo del Oro, una sola. La más bonita."
 	return ""
+
+
+## Jaula de la espada y el reloj que la abre (reloj_espada.gd).
+func _crear_reloj_y_jaula() -> void:
+	if mapa.pos_espada == Vector3.INF:
+		return
+	jaula = RelojEspada.Jaula.new()
+	add_child(jaula)
+	jaula.position = mapa.pos_espada
+	reloj = RelojEspada.Reloj.new()
+	add_child(reloj)
+	reloj.position = mapa.pos_reloj
+	reloj.resuelto.connect(_on_reloj_resuelto)
+	# Un foco cálido baja por el pozo sobre la espada.
+	var foco := SpotLight3D.new()
+	foco.light_color = Color("ffe2b0")
+	foco.light_energy = 3.0
+	foco.spot_range = 10.0
+	foco.spot_angle = 22.0
+	foco.add_to_group("luces_sala")
+	add_child(foco)
+	foco.position = mapa.pos_espada + Vector3.UP * 7.5
+	foco.rotation_degrees.x = -90.0
+
+
+func _on_reloj_resuelto() -> void:
+	jaula.abrir()
+	if espada:
+		espada.bloqueada = false
+	hud.mostrar_aviso("3:19. Clic. La jaula sube por el pozo de luz.")
+	_revisar_objetivo()
 
 
 func _crear_candado_y_llaves() -> void:
@@ -365,11 +412,9 @@ func _cine_cuadro() -> void:
 		cam.look_at(cuadro), desde, hasta, 14.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	await hud.fundir(0.0, 0.6)
 	await hud.reproducir_llamada([
-		{"quien": "MOSTRO", "texto": "Ahí lo tiene, Polo. El cuadro del MAMBO."},
-		{"quien": "MOSTRO", "texto": "Salió del museo geológico, rodó por más museos que un guía turístico, y la junta del MAMBO se lo prestó al Nacional por un solo día."},
-		{"quien": "MOSTRO", "texto": "Un día. Como si el patrimonio fuera una licuadora que uno le presta a la vecina."},
-		{"quien": "MOSTRO", "texto": "Y le pusieron un candado de tres llaves. Muy bonito. Lo quiero en la camioneta antes de que amanezca."},
-		{"quien": "MOSTRO", "texto": "Mi contacto de adentro le mandó dónde están las llaves. Léamelo usted, que yo no tengo tiempo."},
+		{"quien": "MOSTRO", "texto": "Ah, el cuadro del MAMBO. Ese no está en la lista."},
+		{"quien": "MOSTRO", "texto": "Rodó por más museos que un guía turístico y ahora lo tienen bajo candado de tres llaves, como si fuera la espada."},
+		{"quien": "MOSTRO", "texto": "Si le sobra tiempo, me lo trae. Propina en especie. Si no, primero la espada, que para eso le pago."},
 	])
 	await hud.fundir(1.0, 0.3)
 	viaje.kill()
@@ -387,7 +432,7 @@ func _cine_cuadro() -> void:
 		{"quien": "POLO", "texto": "Tres cerraduras: corazón, estrella y tigre."},
 		{"quien": "POLO", "texto": "La del corazón la tiraron a la fuente del patio. La de la estrella la guarda el vigilante en el cajón del escritorio."},
 		{"quien": "POLO", "texto": "Y la del tigre está detrás de un ladrillo flojo, en una celda del tercer piso, ala oeste. Dicen que hay zarpazos pintados en el muro."},
-		{"quien": "POLO", "texto": "Junto las tres, abro la reja y el cuadro se va con nosotros."},
+		{"quien": "POLO", "texto": "Es un extra. Si junto las tres, el cuadro se va con nosotros."},
 	])
 	await hud.fundir(1.0, 0.3)
 	jugador.mostrar_modelo(false)
@@ -400,15 +445,79 @@ func _cine_cuadro() -> void:
 	_revisar_objetivo()
 
 
+## La primera vez que Polo se acerca a la espada (y nadie lo persigue).
+func _revisar_cine_espada() -> void:
+	if Juego.cine_espada_visto or jaula == null or Juego.control_bloqueado or Juego.alarma or saltar_intro:
+		return
+	if jugador.personaje != Jugador.Personaje.POLO:
+		return
+	if jugador.global_position.distance_to(jaula.global_position) < DIST_CINE_ESPADA:
+		_cine_espada()
+
+
+## La cámara baja por el pozo de luz hasta la espada mientras Mostro habla; luego
+## Polo mira el reloj.
+func _cine_espada() -> void:
+	Juego.cine_espada_visto = true
+	Juego.control_bloqueado = true
+	var centro: Vector3 = jaula.global_position + Vector3.UP * 1.1
+	await hud.fundir(1.0, 0.35)
+	hud.franjas(true)
+	# 1. Desde lo alto del pozo, bajando despacio y girando alrededor de la jaula.
+	var cam: Camera3D = _plano(centro + Vector3(0.5, 10.0, 0.5), centro)
+	var viaje := create_tween()
+	viaje.tween_method(func(t: float) -> void:
+		var ang: float = t * 1.4
+		cam.global_position = centro + Vector3(sin(ang) * lerpf(0.5, 3.2, t), lerpf(10.0, 0.7, t), cos(ang) * lerpf(0.5, 3.2, t))
+		cam.look_at(centro), 0.0, 1.0, 16.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	await hud.fundir(0.0, 0.6)
+	await hud.reproducir_llamada([
+		{"quien": "MOSTRO", "texto": "Ahí está, Polo. La espada del Libertador."},
+		{"quien": "MOSTRO", "texto": "Se la prestó la Casa Museo Quinta de Bolívar al Nacional. Una noche. Con papelito firmado, como quien presta una licuadora."},
+		{"quien": "MOSTRO", "texto": "En el 74 se la llevó el M-19, con nota y todo: que la espada volvía a la lucha. La devolvieron en el 91, cuando firmaron la paz."},
+		{"quien": "MOSTRO", "texto": "Desde entonces la sacan a pasear cada vez que alguien necesita una foto. Yo no la quiero para la lucha ni para la foto."},
+		{"quien": "MOSTRO", "texto": "La quiero en mi caja fuerte, al lado de las escrituras del país."},
+	])
+	await hud.fundir(1.0, 0.3)
+	viaje.kill()
+	cam.queue_free()
+	# 2. Primer plano de Polo, mirando el reloj.
+	jugador.mirar_hacia(reloj.global_position)
+	jugador.mostrar_modelo(true)
+	var cabeza: Vector3 = jugador.global_position + Vector3.UP * (Cuerpo.TIPOS["polo"].get("cara", 1.62) as float)
+	var frente: Vector3 = -jugador.global_basis.z
+	var costado: Vector3 = jugador.global_basis.x
+	var cam_polo: Camera3D = _plano(cabeza + frente * 1.75 + costado * 0.45 + Vector3.UP * 0.02, cabeza)
+	cam_polo.fov = 40.0
+	await hud.fundir(0.0, 0.3)
+	await hud.reproducir_llamada([
+		{"quien": "POLO", "texto": "La jaula no tiene candado. Tiene un reloj parado."},
+		{"quien": "POLO", "texto": "Abre con una hora. Y el vigilante dejó la clave en un papelito pegado al reloj. Típico."},
+		{"quien": "POLO", "texto": "Y ese 3 está acostado... parece una M."},
+	])
+	await hud.fundir(1.0, 0.3)
+	jugador.mostrar_modelo(false)
+	cam_polo.queue_free()
+	jugador.activar_camara()
+	hud.franjas(false)
+	await hud.fundir(0.0, 0.3)
+	Juego.control_bloqueado = false
+	_revisar_objetivo()
+
+
 func _revisar_objetivo() -> void:
 	if _terminado:
 		return
 	if jugador.personaje == Jugador.Personaje.MOSTRO and not jugador.polo_rescatado:
 		hud.fijar_objetivo("Encuentra a Polo (marcado en amarillo)")
+	elif Juego.cine_espada_visto and reloj and not reloj.resuelto_ya and not Juego.alarma:
+		hud.fijar_objetivo("La jaula de la espada abre con el reloj: pon la hora correcta (lee el papelito del vigilante)")
+	elif reloj and reloj.resuelto_ya and espada and not espada.robada and not Juego.alarma:
+		hud.fijar_objetivo("Llévate la espada de Bolívar")
 	elif Juego.cine_cuadro_visto and Juego.llaves.size() < 3 and not Juego.alarma and not "cuadro_enlace" in Juego.robadas:
-		hud.fijar_objetivo("Llaves del candado (%d/3): ♥ fuente del patio · ★ cajón de vigilancia · TIGRE celda del piso 3, ala oeste (zarpazos naranjas)" % Juego.llaves.size())
+		hud.fijar_objetivo("Extra: llaves del candado (%d/3): ♥ fuente del patio · ★ cajón de vigilancia · TIGRE celda del piso 3, ala oeste (zarpazos naranjas)" % Juego.llaves.size())
 	elif Juego.cine_cuadro_visto and candado and candado.disponible(jugador) and not Juego.alarma:
-		hud.fijar_objetivo("Abre el candado de la Sala 1 con las tres llaves")
+		hud.fijar_objetivo("Extra: abre el candado de la Sala 1 con las tres llaves")
 	elif Juego.faltantes() > 0 and not Juego.alarma:
 		hud.fijar_objetivo("Piezas por desaparecer: %d" % Juego.faltantes())
 	elif Juego.faltantes() > 0:

@@ -183,7 +183,7 @@ func _cinematica() -> void:
 		{"quien": "POLO", "texto": "¿Y esta señora qué hace parada en la mitad de la vía, con semejante aguacero?"},
 		{"quien": "FRANCHESCA", "texto": "Bájele al tonito. Usted no se va de aquí con la historia de mi pueblo en el baúl."},
 		{"quien": "POLO", "texto": "Señora, esto es un encargo. Yo solo cargo las cajas."},
-		{"quien": "FRANCHESCA", "texto": "Eso dicen todos los que cargan cajas. El poporo, los cuadros, los papeles... nada de eso es de nadie para esconderlo. Es de todos."},
+		{"quien": "FRANCHESCA", "texto": "Eso dicen todos los que cargan cajas. La espada, el poporo, los cuadros... nada de eso es de nadie para esconderlo. Es de todos."},
 	])
 
 	# 5. El grito.
