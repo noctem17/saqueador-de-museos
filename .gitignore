@@ -10,6 +10,7 @@ CLAUDE.md
 /exportar/
 # Música con derechos de autor: solo va dentro del .exe, no al repositorio público.
 /audio/musica/
-# Canciones con derechos de autor que suben los compañeros: tampoco van al repositorio.
-/aportes/musica/*.mp3
+# Canciones con derechos de autor: solo van dentro del .exe, no al repositorio.
+/aportes/musica/Vordt of the Boreal Valley.mp3
+/aportes/musica/Ogryzek - AURA.mp3
 __pycache__/
