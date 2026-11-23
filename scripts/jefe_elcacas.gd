@@ -100,7 +100,7 @@ func _vidrios() -> void:
 	Sfx.plano(mision, "cristal", 4.0)
 	await _esperar(0.25)
 	Sfx.plano(mision, "cristal", 0.0)
-	_polo.una_vez("m_scared_02", 0.05)
+	_polo.una_vez("HitRecieve", 0.05)   # Un brinco del susto.
 	_temblor = 0.6
 	_oscurecer(0.03, 1.2)
 	await _esperar(1.0)
@@ -108,7 +108,7 @@ func _vidrios() -> void:
 	# Voltea hacia el pasillo oscuro.
 	var t := create_tween()
 	t.tween_property(_polo, "rotation:y", _angulo_hacia(_polo, _s + Vector3(10, 0, 0)), 0.5).set_trans(Tween.TRANS_SINE)
-	_polo.reproducir("m_afraid")
+	_polo.reproducir("Idle")
 	await _esperar(0.6)
 
 
@@ -221,7 +221,7 @@ func _discusion() -> void:
 	await t.finished
 	_mirar(elcacas, _polo.global_position)
 	_mirar(_polo, elcacas.global_position)
-	_polo.reproducir("m_afraid")
+	_polo.reproducir("Idle")
 
 
 # ------------------------------------------------------------------ 5. en guardia
@@ -248,9 +248,9 @@ func _en_guardia() -> void:
 	_polo.una_vez("Interact")
 	await _esperar(0.45)
 	Sfx.plano(mision, "descolgar", 2.0)
+	_polo.reproducir("Idle_Sword", 0.0)
 	_palo_en(_polo)
 	_destellar(Color("ff8ad0"))
-	_polo.reproducir("Idle_Sword")
 	_temblor = 0.5
 	await _hud.grito("¡LA ANTIMAMERTOS!", 1.4)
 	# Elcacas la ve.
@@ -460,12 +460,15 @@ func _final() -> void:
 	_nueva_camara(cara_polo + (jefe_pos - _polo.global_position).normalized() * 0.9 + Vector3(0, 0.05, 0.35), cara_polo + Vector3.DOWN * 0.05)
 	await _hablar([{"quien": "POLO", "texto": "Ya se terminó."}])
 	await _mega_punalada(jefe_pos)
-	# Recoge la espada.
+	# Recoge la espada (la antimamertos se queda donde está).
 	elcacas.espada_en_mano.visible = false
+	_mirar(_polo, jefe_pos)
 	_polo.una_vez("Interact")
 	Sfx.plano(mision, "desenfundar", 0.0)
+	await _esperar(0.4)
+	_polo.reproducir("Idle")
+	_polo.sostener(Elcacas.modelo_espada(), _polo.adelante_arriba())
 	var cara: Vector3 = _polo.global_position + Vector3.UP * _cara("polo")
-	_mirar(_polo, jefe_pos)
 	var frente: Vector3 = -_polo.global_basis.z
 	_nueva_camara(cara + frente * 0.95 + _polo.global_basis.x * 0.25, cara + Vector3.DOWN * 0.05)
 	await _hablar([{"quien": "POLO", "texto": "La espada vuelve a la lucha. ...Bueno, a la camioneta."}])
@@ -476,29 +479,37 @@ func _final() -> void:
 ## repite en cámara lenta desde tres ángulos (una palabra del grito en cada una),
 ## él grita, y cae en cámara lenta con la antimamertos todavía clavada.
 func _mega_punalada(jefe_pos: Vector3) -> void:
+	_mirar(_polo, jefe_pos)
 	var adelante: Vector3 = jefe_pos - _polo.global_position
 	adelante.y = 0.0
 	adelante = adelante.normalized()               # De Polo hacia Elcacas (y hacia donde mira él).
 	var lado: Vector3 = adelante.cross(Vector3.UP).normalized()
 	var nalgas: Vector3 = jefe_pos + Vector3.UP * 0.86 - adelante * 0.12
-	var inicio_polo: Vector3 = _polo.global_position
 	if _palo_mano:
 		_palo_mano.visible = false
-	# Una antimamertos grande en el mundo, acostada, apuntando a las nalgas.
+	# Polo en estocada baja (pose hecha a mano) con una antimamertos grande en la mano,
+	# horizontal, hacia las nalgas.
+	_polo.pose_estocada()
 	var lanza := Node3D.new()
 	var palo: Node3D = PaloRosado.modelo()
 	palo.scale = Vector3(1.4, 2.0, 1.4)
 	lanza.add_child(palo)
-	mision.add_child(lanza)
-	var arriba: Vector3 = Vector3.UP
-	lanza.global_basis = Basis(adelante.cross(arriba), adelante, -arriba).orthonormalized()
-	var apuntando: Vector3 = nalgas - adelante * 1.55    # La punta queda justo detrás.
-	var clavada: Vector3 = nalgas - adelante * 0.55      # La punta sale por delante.
-	lanza.global_position = apuntando
-	_polo.reproducir("Idle_Sword")
+	_polo.sostener(lanza, (adelante + Vector3.DOWN * 0.04).normalized())
+	# ¿Dónde tiene que quedar Polo para que la punta salga por delante de Elcacas?
+	# La pose no cambia: se mueve el cuerpo entero, y la vara con él.
+	await get_tree().process_frame
+	var punta: Vector3 = lanza.to_global(Vector3(0, 1.32, 0))
+	var meta_punta: Vector3 = nalgas + adelante * 0.5
+	var mover: Vector3 = meta_punta - punta
+	mover.y = 0.0
+	var clavado: Vector3 = _polo.global_position + mover
+	var amagando: Vector3 = clavado - adelante * 0.95
 
-	# 1. Apunta. Primer plano bajo, la cámara se acerca despacio.
-	_nueva_camara(nalgas + lado * 1.1 - adelante * 0.55 + Vector3.DOWN * 0.05, nalgas - adelante * 0.35)
+	# 1. Apunta. Primer plano bajo de la punta frente a las nalgas.
+	_polo.global_position = amagando
+	await get_tree().process_frame
+	var punta_ahora: Vector3 = lanza.to_global(Vector3(0, 1.32, 0))
+	_nueva_camara(punta_ahora + lado * 1.0 - adelante * 0.35 + Vector3.UP * 0.05, punta_ahora.lerp(nalgas, 0.5))
 	_cam.fov = 50.0
 	create_tween().tween_property(_cam, "fov", 30.0, 2.2).set_trans(Tween.TRANS_SINE)
 	Sfx.plano(mision, "desenfundar", 0.0)
@@ -507,23 +518,21 @@ func _mega_punalada(jefe_pos: Vector3) -> void:
 	# 2. La estocada, tres veces, cada una desde otro ángulo.
 	var planos: Array = [
 		# [desde, mira a, palabra]
-		[jefe_pos + lado * 2.4 + Vector3.UP * 0.9 - adelante * 0.4, nalgas, "¡MEGA!"],
-		[inicio_polo - adelante * 0.6 - lado * 1.5 + Vector3.UP * 0.25, nalgas + Vector3.DOWN * 0.15, "¡PUÑALADA!"],
-		[jefe_pos + adelante * 1.6 - lado * 0.5 + Vector3.UP * 1.25, jefe_pos + Vector3.UP * 1.05, "¡DE CARNE!"],
+		[jefe_pos + lado * 2.6 + Vector3.UP * 0.9 - adelante * 0.6, nalgas - adelante * 0.3, "¡MEGA!"],
+		[jefe_pos - lado * 2.3 - adelante * 0.5 + Vector3.UP * 0.3, nalgas - adelante * 0.35 + Vector3.DOWN * 0.1, "¡PUÑALADA!"],
+		[jefe_pos + adelante * 1.7 - lado * 0.6 + Vector3.UP * 1.25, jefe_pos + Vector3.UP * 1.0, "¡DE CARNE!"],
 	]
 	for i: int in planos.size():
-		lanza.global_position = apuntando
-		_polo.global_position = inicio_polo
+		_polo.global_position = amagando
 		elcacas.cuerpo.reproducir("m_cry")
 		_nueva_camara(planos[i][0] as Vector3, planos[i][1] as Vector3)
 		_cam.fov = 48.0
 		_destellar(Color.WHITE)
 		Engine.time_scale = 0.28
-		await _esperar(0.12)
-		_polo.una_vez("Punch_Right", 0.03)
+		await _esperar(0.15)
+		# Todo el cuerpo se lanza hacia adelante.
 		var t := create_tween()
-		t.tween_property(lanza, "global_position", clavada, 0.14).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
-		t.parallel().tween_property(_polo, "global_position", inicio_polo + adelante * 0.35, 0.14)
+		t.tween_property(_polo, "global_position", clavado, 0.13).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
 		await _esperar(0.12)
 		# El impacto: lo levanta un poco, destello rosado y temblor.
 		elcacas.cuerpo.posar("HitRecieve", 0.35)
@@ -546,8 +555,11 @@ func _mega_punalada(jefe_pos: Vector3) -> void:
 	_temblor = 0.6
 	await _hablar([{"quien": "ELCACAS", "texto": "¡¡AAAYYY!! ¡MI FUERO! ¡ME VIOLARON EL FUERO!"}])
 
-	# 4. Cae en cámara lenta, con la antimamertos clavada. La cámara gira alrededor.
+	# 4. Polo la suelta: la antimamertos se queda clavada. Él cae en cámara lenta y
+	# la cámara gira alrededor.
 	lanza.reparent(elcacas.cuerpo.adjuntar("Hips"), true)
+	_polo.global_position = clavado - adelante * 0.5
+	_polo.reproducir("Idle", 0.0)
 	if _musica:
 		mision._apagar_musica(_musica, 3.0)
 	_nueva_camara(jefe_pos + lado * 2.6 + Vector3.UP * 1.0, Vector3.ZERO)
@@ -565,8 +577,6 @@ func _mega_punalada(jefe_pos: Vector3) -> void:
 	Sfx.plano(mision, "explosion", -14.0)   # El golpe contra el piso.
 	await _esperar(1.4)
 	_seguir_a = null
-	if _palo_mano:
-		_palo_mano.visible = true
 
 
 # ------------------------------------------------------------------ ayudas
@@ -721,10 +731,8 @@ func _titulo() -> void:
 
 ## El palo rosado en la mano de un cuerpo (para las escenas de cine).
 func _palo_en(c: Cuerpo) -> void:
-	var mano: Node3D = c.adjuntar("Wrist.R")
 	var palo: Node3D = PaloRosado.modelo()
-	mano.add_child(palo)
-	palo.position = Vector3(0.0, 0.08, 0.02)
+	c.sostener(palo, c.adelante_arriba())
 	_palo_mano = palo
 
 

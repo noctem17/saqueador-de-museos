@@ -55,11 +55,11 @@ func reproducir(m: Node, pos_polo: Vector3, causa: String) -> void:
 	_mostro.silueta(true)
 	_faros(esquina + Vector3(3.4, 0, 0.5), Vector3(-1, 0, 0))
 	# Su mitad lo muestra de perfil, a contraluz.
-	# Polo está encogido del miedo: su cara queda un poco más abajo que de pie.
-	var cara_polo: float = (Cuerpo.TIPOS["polo"]["cara"] as float) - 0.22
+	# Polo, de pie y escondido.
+	var cara_polo: float = Cuerpo.TIPOS["polo"]["cara"] as float
 	var cara_mostro: float = Cuerpo.TIPOS["mostro"]["cara"] as float
 	var partida: Control = _pantalla_partida(
-		pos_polo + Vector3(0.2, cara_polo + 0.05, -0.95), pos_polo + Vector3(0, cara_polo + 0.03, 0),
+		pos_polo + Vector3(0.2, cara_polo - 0.02, -0.95), pos_polo + Vector3(0, cara_polo - 0.12, 0),
 		esquina + Vector3(-2.3, cara_mostro - 0.35, -0.55), esquina + Vector3(0, cara_mostro - 0.45, -0.15))
 	get_viewport().disable_3d = true   # Queda tapado por las dos mitades.
 	await _hud.fundir(0.0, 0.5)

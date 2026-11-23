@@ -64,11 +64,8 @@ func tomar_espada() -> void:
 		espada_en_mano.visible = true
 		return
 	espada_en_mano = Elcacas.modelo_espada()
-	var mano: Node3D = cuerpo.adjuntar("Wrist.R")
-	mano.add_child(espada_en_mano)
 	# La hoja sale del puño hacia adelante, como en las animaciones de espada.
-	espada_en_mano.position = Vector3(0.0, 0.08, 0.02)
-	espada_en_mano.rotation_degrees = Vector3(0, 0, 0)
+	cuerpo.sostener(espada_en_mano, cuerpo.adelante_arriba())
 
 
 ## Espada hecha con figuras simples: hoja, guarda y empuñadura doradas.

@@ -35,7 +35,8 @@ var _en_conexion: bool = false
 var _silencio_hasta: float = 0.0        ## Hasta cuándo suena la música de la obra robada.
 var _bajas_mostro: int = 0              ## Guardias que ha tumbado Mostro.
 var espada: Obra                        ## La espada de Bolívar (pieza obligatoria).
-static var sin_elcacas: bool = false    ## Las pruebas se llevan la espada sin pelear.
+static var sin_elcacas: bool = false
+var _gracia_huida: int = 0              ## Hasta cuándo no pueden atrapar a Polo (ms).    ## Las pruebas se llevan la espada sin pelear.
 var jaula: RelojEspada.Jaula
 var reloj: RelojEspada.Reloj
 const DIST_CINE_ESPADA: float = 8.0
@@ -594,10 +595,28 @@ func _on_alarma(motivo: String) -> void:
 
 ## La pelea con Elcacas por la espada. Al final Polo se la lleva y suena la alarma.
 func _pelea_elcacas() -> void:
+	# Los guardias salen de escena mientras tanto; vuelven cuando suena la alarma.
+	var guardias: Array[Node] = get_tree().get_nodes_in_group("guardias")
+	for g: Node in guardias:
+		g.process_mode = Node.PROCESS_MODE_DISABLED
+		(g as Node3D).visible = false
 	var jefe := JefeElcacas.new()
 	add_child(jefe)
 	await jefe.reproducir(self)
 	jefe.queue_free()
+	# Vuelven, pero lejos de Polo: cada uno en el punto de su ronda más alejado.
+	var polo: Vector3 = jugador.global_position
+	for g: Node in guardias:
+		if not is_instance_valid(g):
+			continue
+		var guardia := g as Guardia
+		var lejos: Vector3 = guardia.global_position
+		for punto: Vector3 in guardia.ruta:
+			if punto.distance_to(polo) > lejos.distance_to(polo):
+				lejos = punto
+		guardia.global_position = lejos
+		guardia.process_mode = Node.PROCESS_MODE_INHERIT
+		guardia.visible = true
 	jugador.global_position = mapa.pos_espada + JefeElcacas.LADO_POLO
 	jugador.mirar_hacia(mapa.pos_espada + Vector3(10, 0, 0))
 	Juego.disparar_alarma("elcacas")
@@ -608,6 +627,7 @@ func _pelea_elcacas() -> void:
 ## Después de Elcacas: todos oyeron el escándalo. Polo (sin Mostro) tiene que
 ## llegar a la camioneta con la espada antes de que lo alcancen.
 func _alarma_huida() -> void:
+	_gracia_huida = Time.get_ticks_msec() + 4000   # Unos segundos para arrancar.
 	_encender_luces_alarma()
 	_alarma_sonido = Sfx.bucle(self, "alarma", -16.0)
 	hud.grito("¡ALARMA!", 1.2)
@@ -618,7 +638,7 @@ func _alarma_huida() -> void:
 
 
 func _on_polo_atrapado() -> void:
-	if _terminado:
+	if _terminado or Time.get_ticks_msec() < _gracia_huida:
 		return
 	_terminado = true
 	Juego.control_bloqueado = true

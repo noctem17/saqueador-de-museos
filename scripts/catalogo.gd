@@ -172,16 +172,16 @@ const OBRAS: Array[Dictionary] = [
 
 ## Cuadros de relleno: decoran las salas pero nunca están en la agenda.
 const RELLENO: Array[Dictionary] = [
-	{"id": "relleno_grau", "titulo": "Obra de la colección", "autor": "Enrique Grau", "anio": "", "tam": Vector2(1.4, 1.1), "paleta": ["#a8503a", "#e6c58f", "#34464f"]},
+	{"id": "relleno_grau", "titulo": "Cara de mujer", "autor": "Enrique Grau", "anio": "", "tam": Vector2(1.4, 1.1), "paleta": ["#a8503a", "#e6c58f", "#34464f"]},
 	{"id": "relleno_roda", "titulo": "Obra de la colección", "autor": "Juan Antonio Roda", "anio": "", "tam": Vector2(1.2, 1.5), "paleta": ["#22252b", "#8c8f96", "#c7b89b"]},
-	{"id": "relleno_cardenas", "titulo": "Obra de la colección", "autor": "Santiago Cárdenas", "anio": "", "tam": Vector2(1.6, 1.2), "paleta": ["#dfe3e6", "#7d8790", "#2c3136"]},
-	{"id": "relleno_caballero", "titulo": "Obra de la colección", "autor": "Luis Caballero", "anio": "", "tam": Vector2(1.8, 1.3), "paleta": ["#d9d0c0", "#6a5c4d", "#1f1b18"]},
-	{"id": "relleno_santa_maria", "titulo": "Obra de la colección", "autor": "Andrés de Santa María", "anio": "", "tam": Vector2(1.2, 1.2), "paleta": ["#3f6b4f", "#d69c4b", "#7f3f2f"]},
+	{"id": "relleno_cardenas", "titulo": "Invierno", "autor": "Santiago Cárdenas", "anio": "", "tam": Vector2(1.6, 1.2), "paleta": ["#dfe3e6", "#7d8790", "#2c3136"]},
+	{"id": "relleno_caballero", "titulo": "La agonía", "autor": "Luis Caballero", "anio": "", "tam": Vector2(1.8, 1.3), "paleta": ["#d9d0c0", "#6a5c4d", "#1f1b18"]},
+	{"id": "relleno_santa_maria", "titulo": "Macuto", "autor": "Andrés de Santa María", "anio": "", "tam": Vector2(1.2, 1.2), "paleta": ["#3f6b4f", "#d69c4b", "#7f3f2f"]},
 	{"id": "relleno_salcedo", "titulo": "Obra de la colección", "autor": "Doris Salcedo", "anio": "", "tam": Vector2(1.5, 1.1), "paleta": ["#4a4340", "#a59a8d", "#1c1917"]},
-	{"id": "relleno_munoz", "titulo": "Obra de la colección", "autor": "Óscar Muñoz", "anio": "", "tam": Vector2(1.1, 1.4), "paleta": ["#bfbfbf", "#5c5c5c", "#141414"]},
-	{"id": "relleno_rojas", "titulo": "Obra de la colección", "autor": "Miguel Ángel Rojas", "anio": "", "tam": Vector2(1.3, 1.3), "paleta": ["#b0413e", "#e9d8a6", "#264653"]},
-	{"id": "relleno_morelos", "titulo": "Obra de la colección", "autor": "Delcy Morelos", "anio": "", "tam": Vector2(1.7, 1.2), "paleta": ["#7b2d26", "#3c1a14", "#c08552"]},
-	{"id": "relleno_ramirez", "titulo": "Obra de la colección", "autor": "Eduardo Ramírez Villamizar", "anio": "", "tam": Vector2(1.2, 1.2), "paleta": ["#efefef", "#bdbdbd", "#333333"]},
+	{"id": "relleno_munoz", "titulo": "Vicky", "autor": "Óscar Muñoz", "anio": "", "tam": Vector2(1.1, 1.4), "paleta": ["#bfbfbf", "#5c5c5c", "#141414"]},
+	{"id": "relleno_rojas", "titulo": "Boca", "autor": "Miguel Ángel Rojas", "anio": "", "tam": Vector2(1.3, 1.3), "paleta": ["#b0413e", "#e9d8a6", "#264653"]},
+	{"id": "relleno_morelos", "titulo": "Matrimonio", "autor": "Delcy Morelos", "anio": "", "tam": Vector2(1.7, 1.2), "paleta": ["#7b2d26", "#3c1a14", "#c08552"]},
+	{"id": "relleno_ramirez", "titulo": "Verde, azul y negro", "autor": "Eduardo Ramírez Villamizar", "anio": "", "tam": Vector2(1.2, 1.2), "paleta": ["#efefef", "#bdbdbd", "#333333"]},
 ]
 
 ## Coleccionables: opcionales, se guardan en el bolso y se pueden leer.

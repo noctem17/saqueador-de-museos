@@ -85,7 +85,7 @@ func _ficha_corta() -> String:
 # ---------------------------------------------------------------- en la pared
 
 func _armar_cuadro() -> void:
-	var tam: Vector2 = datos["tam"]
+	var tam: Vector2 = _tam_segun_imagen(datos["tam"])
 	var tela: bool = datos.get("tela", false)
 	if tela:
 		# Bandera: tela colgada de una varilla, sin marco.
@@ -112,6 +112,21 @@ func _armar_cuadro() -> void:
 
 	agregar_colision(Vector3(tam.x + 0.16, tam.y + 0.16, 0.12), Vector3(0, 0, 0.06))
 	_crear_placa(Vector3(tam.x * 0.5 + 0.42, -0.45, 0.02))
+
+
+## Con la imagen real, el cuadro toma su forma (ancho/alto) y conserva más o menos
+## el mismo tamaño en la pared que tenía en el catálogo.
+func _tam_segun_imagen(tam: Vector2) -> Vector2:
+	var ruta: String = Catalogo.imagen(datos["id"])
+	if ruta == "" or datos.get("tela", false):
+		return tam
+	var textura: Texture2D = load(ruta)
+	var forma: float = float(textura.get_width()) / float(textura.get_height())
+	var area: float = tam.x * tam.y
+	var nuevo := Vector2(sqrt(area * forma), sqrt(area / forma))
+	# Que quepa en la pared: máximo 2.6 m de ancho y 1.8 m de alto.
+	var reducir: float = minf(1.0, minf(2.6 / nuevo.x, 1.8 / nuevo.y))
+	return nuevo * reducir
 
 
 # ---------------------------------------------------------------- en pedestal
@@ -229,6 +244,22 @@ func _custodia() -> void:
 ## Escultura: planos metálicos encajados, al estilo de Bursztyn o Negret.
 func _escultura() -> void:
 	var tam: Vector2 = datos["tam"]
+	var ruta: String = Catalogo.imagen(datos["id"])
+	if ruta != "":
+		# La foto de la escultura, recortada (PNG con fondo transparente), siempre de
+		# frente al que la mira.
+		var foto := Sprite3D.new()
+		foto.texture = load(ruta)
+		foto.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
+		foto.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
+		foto.shaded = true
+		foto.double_sided = true
+		foto.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		var alto: float = tam.y * 0.85
+		foto.pixel_size = alto / float(foto.texture.get_height())
+		foto.position.y = alto * 0.5
+		_contenido.add_child(foto)
+		return
 	var paleta: Array = datos["paleta"]
 	var semilla := RandomNumberGenerator.new()
 	semilla.seed = hash(datos["id"])

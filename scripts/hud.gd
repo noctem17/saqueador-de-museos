@@ -258,18 +258,25 @@ func _armar_pantalla(raiz: Control) -> void:
 	_lista_bolso.add_theme_color_override("font_color", Color.WHITE)
 	_lista_bolso.item_selected.connect(_leer_item)
 	der.add_child(_lista_bolso)
+	# Ficha: la foto a la izquierda y el texto al lado.
+	var ficha := HBoxContainer.new()
+	ficha.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	ficha.add_theme_constant_override("separation", 16)
+	der.add_child(ficha)
 	_foto = TextureRect.new()
-	_foto.custom_minimum_size.y = 200
+	_foto.custom_minimum_size = Vector2(250, 250)
+	_foto.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_foto.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_foto.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_foto.visible = false
-	der.add_child(_foto)
+	ficha.add_child(_foto)
 	_lectura = RichTextLabel.new()
 	_lectura.bbcode_enabled = true
+	_lectura.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_lectura.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_lectura.add_theme_color_override("default_color", COLOR_TINTA)
-	_lectura.add_theme_font_size_override("normal_font_size", 18)
-	der.add_child(_lectura)
+	_lectura.add_theme_font_size_override("normal_font_size", 17)
+	ficha.add_child(_lectura)
 	var pie := Label.new()
 	pie.text = "TAB para cerrar"
 	pie.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -570,13 +577,18 @@ func _refrescar_bolso() -> void:
 	if Juego.bolso.is_empty():
 		_lectura.text = "El bolso está vacío."
 	else:
-		_lectura.text = "Elige algo de la lista para leer su historia."
+		# Abre mostrando lo último que se guardó.
+		var ultimo: int = Juego.bolso.size() - 1
+		_lista_bolso.select(ultimo)
+		_lista_bolso.ensure_current_is_visible()
+		_leer_item(ultimo)
 
 
 ## Muestra la ficha y, si la pieza tiene foto real en res://arte/, la foto.
 func _leer_item(indice: int) -> void:
 	var item: Dictionary = Juego.bolso[indice]
-	_lectura.text = "[b]%s[/b]\n%s\n\n%s" % [item["nombre"], item["detalle"], item["texto"]]
+	var titulo: String = "[font_size=22][b]%s[/b][/font_size]" % item["nombre"]
+	_lectura.text = "%s\n[i]%s[/i]\n\n%s" % [titulo, item["detalle"], item["texto"]]
 	var ruta: String = item.get("imagen", "")
 	_foto.visible = ruta != ""
 	if ruta != "":

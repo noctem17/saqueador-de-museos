@@ -8,6 +8,7 @@ extends Node3D
 var _n: int = 0
 var _mision: Mision
 var _primero: bool = true
+var _foto: int = 0
 
 
 func _ready() -> void:
@@ -15,8 +16,6 @@ func _ready() -> void:
 	_mision = Mision.new()
 	add_child(_mision)
 	await get_tree().process_frame
-	for g: Node in get_tree().get_nodes_in_group("guardias"):
-		g.process_mode = Node.PROCESS_MODE_DISABLED
 	for c: Node in get_tree().get_nodes_in_group("camaras"):
 		c.process_mode = Node.PROCESS_MODE_DISABLED
 	var j: Jugador = _mision.jugador
@@ -31,15 +30,17 @@ func _ready() -> void:
 	var fin: int = Time.get_ticks_msec() + 240000
 	while Time.get_ticks_msec() < fin:
 		_pilotear()
-		if _n % 30 == 0:
-			get_viewport().get_texture().get_image().save_png("res://capturas/elcacas_%03d.png" % (_n / 30))
+		var cada: int = 8 if Engine.time_scale < 0.9 else 30   # Más fotos en cámara lenta.
+		if _n % cada == 0:
+			get_viewport().get_texture().get_image().save_png("res://capturas/elcacas_%03d.png" % _foto)
+			_foto += 1
 		_n += 1
 		await get_tree().process_frame
 		if Juego.alarma and _mision.espada.robada and not Juego.control_bloqueado:
 			print("FIN: espada robada, alarma sonando, Polo con control")
 			for i: int in 3:
 				await get_tree().create_timer(0.5).timeout
-				get_viewport().get_texture().get_image().save_png("res://capturas/elcacas_%03d.png" % (_n / 30 + i + 1))
+				get_viewport().get_texture().get_image().save_png("res://capturas/elcacas_%03d.png" % (_foto + i))
 			break
 	print("espada robada: ", _mision.espada.robada, "  alarma: ", Juego.alarma, "  vida Polo: ", _mision.jugador.vida)
 	get_tree().quit()

@@ -30,7 +30,7 @@ const TIPOS: Dictionary[String, Dictionary] = {
 		"agachado": -0.36,
 		"animaciones": {"Idle": "Idle_Neutral", "Walk": "m_walk", "Run": "m_run"},
 		"bucles": ["m_walk", "m_run", "m_scared_01", "m_clap", "m_afraid"],
-		"escondido": "m_afraid",
+		"escondido": "Idle",   # Sin animaciones de miedo: le deforman la cara.
 	},
 	"mostro": {
 		"modelo": "res://modelos/mostro_mx.glb",
@@ -159,11 +159,13 @@ func reproducir(nombre: String, mezcla: float = 0.2) -> void:
 	if _base == nombre:
 		return
 	_base = nombre
+	_anim.active = true
 	_anim.play(_completa(nombre), mezcla)
 
 
 ## Animación de una sola vez; al terminar regresa a la base.
 func una_vez(nombre: String, mezcla: float = 0.08) -> void:
+	_anim.active = true
 	_anim.play(_completa(nombre), mezcla)
 
 
@@ -171,6 +173,7 @@ func una_vez(nombre: String, mezcla: float = 0.08) -> void:
 func posar(nombre: String, proporcion: float) -> void:
 	_base = nombre
 	var completo: String = _completa(nombre)
+	_anim.active = true
 	_anim.play(completo)
 	_anim.seek(_anim.get_animation(completo).length * proporcion, true)
 	_anim.pause()
@@ -246,6 +249,7 @@ func _enderezar_pistola(arma: Node3D) -> void:
 
 func morir() -> void:
 	_base = ""
+	_anim.active = true
 	_anim.play(_completa("Death"), 0.1)
 
 
@@ -278,6 +282,57 @@ func _recolorear(colores: Dictionary) -> void:
 				nuevo.albedo_color = Color(colores[nombre] as String)
 				_materiales[clave] = nuevo
 			malla.set_surface_override_material(s, _materiales[clave])
+
+
+## Pone un objeto largo (palo, espada) en la mano: entra por la palma y apunta en
+## `direccion` (en el mundo), según la pose que tenga la mano en este momento.
+## Después sigue a la mano en cada animación. El objeto debe ir a lo largo de su +Y.
+func sostener(objeto: Node3D, direccion: Vector3, hueso: String = "Wrist.R") -> void:
+	if _anim.active:
+		_anim.advance(0.0)   # Que la pose de la animación ya esté puesta.
+	_esqueleto.force_update_all_bone_transforms()
+	var metros: Node3D = adjuntar(hueso)
+	metros.add_child(objeto)
+	var i: int = _esqueleto.find_bone(_hueso(hueso))
+	var mano: Transform3D = _esqueleto.global_transform * _esqueleto.get_bone_global_pose(i)
+	var dedos: Vector3 = mano.basis.y.normalized()
+	var palma: Vector3 = mano.origin + dedos * 0.06
+	var y: Vector3 = direccion.normalized()
+	var x: Vector3 = y.cross(Vector3.UP if absf(y.dot(Vector3.UP)) < 0.95 else Vector3.RIGHT).normalized()
+	var deseado := Transform3D(Basis(x, y, x.cross(y)), palma - y * 0.1)
+	# Relativo al hueso, sin esperar a que el nodo del hueso se actualice.
+	var a_hueso: Transform3D = Transform3D(mano.basis.orthonormalized(), mano.origin).affine_inverse() * deseado
+	var hueso_a_metros: Transform3D = metros.transform
+	objeto.transform = hueso_a_metros.affine_inverse() * a_hueso
+
+
+## Estocada baja hecha a mano (los paquetes no la traen): pierna derecha adelante,
+## torso inclinado y el brazo derecho estirado hacia abajo y al frente.
+## `ajustes` permite cambiar ángulos para probar: {"hueso": [eje, ángulo]}.
+const POSE_ESTOCADA: Array = [
+	["UpperLeg.R", Vector3.RIGHT, -0.75],
+	["LowerLeg.R", Vector3.RIGHT, 0.7],
+	["UpperLeg.L", Vector3.RIGHT, 0.45],
+	["LowerLeg.L", Vector3.RIGHT, 0.35],
+	["Abdomen", Vector3.RIGHT, 0.3],
+	["Chest", Vector3.RIGHT, 0.15],
+	["UpperArm.R", Vector3.RIGHT, -0.9],
+	["UpperArm.R", Vector3.FORWARD, -0.25],
+	["LowerArm.R", Vector3.RIGHT, -0.25],
+	["UpperArm.L", Vector3.RIGHT, 0.5],
+]
+
+
+func pose_estocada(pose: Array = POSE_ESTOCADA) -> void:
+	posar("Idle_Neutral", 0.0)
+	_anim.active = false   # Si no, el reproductor vuelve a poner la animación encima.
+	for p: Array in pose:
+		_doblar(p[0] as String, p[1] as Vector3, p[2] as float)
+
+
+## Hacia adelante y un poco arriba, como se sostiene un sable en guardia.
+func adelante_arriba() -> Vector3:
+	return (-global_basis.z * 0.8 + Vector3.UP * 0.6).normalized()
 
 
 ## Velocidad de las animaciones (1 = normal; menos = cámara lenta).
